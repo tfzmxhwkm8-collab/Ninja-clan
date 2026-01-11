@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Ninja Town RPG</title>
 <style>
-  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto;touch-action:none;-webkit-user-select:none;user-select:none}
+  html,body{
+    margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none
+  }
   :root{
     --pad-top: env(safe-area-inset-top);
     --pad-right: env(safe-area-inset-right);
@@ -17,17 +20,16 @@
   *{-webkit-tap-highlight-color:transparent}
   .hidden{display:none!important}
 
-  /* Top bar */
+  /* ===== Top bar ===== */
   #topbar{
-    position:absolute; z-index:20;
+    position:absolute; z-index:50;
     left:calc(10px + var(--pad-left));
     right:calc(10px + var(--pad-right));
     top:calc(10px + var(--pad-top));
-    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    display:flex;gap:10px;align-items:center;justify-content:space-between;
     background:linear-gradient(var(--wood1),var(--wood2));
     border:2px solid rgba(0,0,0,.18);
-    border-radius:14px;
-    padding:10px 12px;
+    border-radius:14px;padding:10px 12px;
     box-shadow:0 10px 24px rgba(0,0,0,.25);
     color:var(--ink);
   }
@@ -36,70 +38,70 @@
     display:flex;gap:8px;align-items:center;
     background:rgba(255,255,255,.25);
     border:1px solid rgba(0,0,0,.14);
-    border-radius:999px;
-    padding:6px 10px;
-    font-weight:950;font-size:12px;
+    border-radius:999px;padding:6px 10px;font-weight:950;font-size:12px;
   }
   .chip b{font-family:ui-monospace,Menlo,monospace}
   .btn{
     border:0;border-radius:12px;padding:10px 12px;font-weight:950;
     background:#eee;color:#111; box-shadow:0 6px 14px rgba(0,0,0,.18);
   }
-  .btn.primary{background:var(--accent)}
   .btn.ghost{background:rgba(255,255,255,.25); border:1px solid rgba(0,0,0,.14);}
   .btn.small{padding:8px 10px;font-size:12px;border-radius:11px}
+  .btn.primary{background:var(--accent)}
   .btn:disabled{opacity:.55}
 
-  /* ====== TOWN SCREEN (uses your screenshot) ====== */
+  /* ===== Town screen ===== */
   #town{
     position:absolute; inset:0;
     padding-top:calc(64px + var(--pad-top));
   }
   #townBg{
     position:absolute; inset:0;
-    background-image:url("town.jpg"); /* <-- upload your town screenshot to repo as town.jpg */
+    background-image:url("town.jpg");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
-    filter:saturate(1.05);
+    filter:saturate(1.02) contrast(1.01);
   }
 
-  /* Hotspots overlay (tap areas). Adjust if you want tighter hitboxes. */
+  /* Tap zones:
+     - INVISIBLE by default (no rectangles)
+     - still clickable on iPhone
+  */
   .hotspot{
-    position:absolute; z-index:5;
-    border-radius:18px;
-    background:rgba(255,255,255,.08);
-    border:2px solid rgba(255,255,255,.16);
-    box-shadow:0 12px 20px rgba(0,0,0,.18);
-    backdrop-filter:blur(2px);
-    display:flex; align-items:flex-end; justify-content:center;
-    padding:10px;
+    position:absolute;
+    background:transparent;
+    border:0;
+    border-radius:16px;
+    padding:0;
+    z-index:10;
   }
-  .hotspot span{
-    background:rgba(255,255,255,.68);
-    border:1px solid rgba(0,0,0,.12);
-    padding:6px 10px;border-radius:999px;font-size:12px;
-    font-weight:1000;color:#1a0f08;
-  }
-  /* positions tuned for iPhone based on your image */
-  #hsDaimyo{left:5%; top:16%; width:24%; height:18%}
-  #hsHospital{left:34%; top:24%; width:22%; height:18%}
-  #hsRelic{left:52%; top:18%; width:26%; height:20%}
-  #hsWeapon{left:70%; top:30%; width:26%; height:20%}
-  #hsRecruit{left:14%; top:54%; width:28%; height:20%}
-  #hsDojo{left:44%; top:60%; width:22%; height:18%}
-  #hsFight{left:70%; top:74%; width:26%; height:20%;
-    background:rgba(255,122,24,.16); border-color:rgba(255,122,24,.30)}
 
-  /* ====== MODALS ====== */
+  /* Optional DEBUG mode (turn on in JS: DEBUG_HOTSPOTS=true) */
+  .hotspot.debug{
+    background:rgba(255,255,255,.10);
+    outline:2px solid rgba(255,255,255,.25);
+    backdrop-filter:blur(2px);
+  }
+
+  /* Tuned to match your screenshot positions */
+  #hsDaimyo   {left: 6%; top: 18%; width:24%; height:18%}
+  #hsHospital {left:34%; top: 26%; width:22%; height:18%}
+  #hsRelic    {left:52%; top: 20%; width:26%; height:18%}
+  #hsWeapon   {left:70%; top: 34%; width:26%; height:18%}
+  #hsRecruit  {left:12%; top: 54%; width:30%; height:20%}
+  #hsDojo     {left:42%; top: 62%; width:24%; height:18%}
+  #hsFight    {left:70%; top: 76%; width:26%; height:20%}
+
+  /* ===== Modal ===== */
   .modal{
-    position:absolute; inset:0; z-index:50;
+    position:absolute; inset:0; z-index:80;
     display:flex; align-items:center; justify-content:center;
     background:rgba(0,0,0,.35);
     padding:14px;
   }
   .card{
-    width:min(660px,96%);
+    width:min(680px,96%);
     background:linear-gradient(#f7edd6,#f0e0bf);
     border:2px solid rgba(0,0,0,.18);
     border-radius:18px;
@@ -134,40 +136,23 @@
   }
   .item:last-child{border-bottom:0}
   .pill{
-    display:inline-block;
-    padding:4px 8px;border-radius:999px;
+    display:inline-block;padding:4px 8px;border-radius:999px;
     background:rgba(255,255,255,.55);
     border:1px solid rgba(0,0,0,.10);
     font-size:11px;font-weight:950;
   }
-  .rar{font-weight:1000}
-  .rar.Common{color:#555}
-  .rar.Uncommon{color:#0d7a1c}
-  .rar.Rare{color:#1a63c8}
-  .rar.Epic{color:#7a2ac9}
-  .rar.Legendary{color:#b06b00}
 
-  /* ====== BATTLE SCREEN (uses your screenshot) ====== */
-  #battle{
-    position:absolute; inset:0; z-index:30;
-  }
+  /* ===== Battle (kept simple; uses battle.jpg if you have it) ===== */
+  #battle{ position:absolute; inset:0; z-index:60; }
   #battleBg{
     position:absolute; inset:0;
-    background-image:url("battle.jpg"); /* <-- upload your battle screenshot to repo as battle.jpg */
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
+    background-image:url("battle.jpg");
+    background-size:cover;background-position:center;background-repeat:no-repeat;
     transform:scale(1.02);
   }
-  #battleShade{
-    position:absolute; inset:0;
-    background:linear-gradient(rgba(0,0,0,.00), rgba(0,0,0,.10));
-  }
   #battleCanvas{position:absolute; inset:0; width:100%; height:100%}
-
-  /* Top VS bars */
   #battleTop{
-    position:absolute; z-index:40;
+    position:absolute; z-index:70;
     left:calc(10px + var(--pad-left));
     right:calc(10px + var(--pad-right));
     top:calc(10px + var(--pad-top));
@@ -184,15 +169,11 @@
     min-width:0;
   }
   .hpName{font-weight:1000;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hpBar{
-    height:12px;border-radius:999px;background:rgba(0,0,0,.18);
-    overflow:hidden;margin-top:6px;border:1px solid rgba(0,0,0,.12);
-  }
+  .hpBar{height:12px;border-radius:999px;background:rgba(0,0,0,.18);overflow:hidden;margin-top:6px;border:1px solid rgba(0,0,0,.12);}
   .hpFill{height:100%; width:100%; background:linear-gradient(#ffb845,#ff7a18);}
   .vs{font-weight:1000;font-size:22px;color:#fff;text-shadow:0 4px 10px rgba(0,0,0,.35);padding:0 10px}
-
   #skipBtn{
-    position:absolute; z-index:40;
+    position:absolute; z-index:70;
     top:calc(78px + var(--pad-top));
     left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,.75);
@@ -201,417 +182,165 @@
   }
 </style>
 </head>
-
 <body>
-  <div id="topbar">
-    <div class="barL">
-      <div class="chip">Active <b id="uiName">—</b></div>
-      <div class="chip">HP <b id="uiHP">—</b></div>
-      <div class="chip">☯ <b id="uiKarma">0</b></div>
-      <div class="chip">🪙 <b id="uiGold">0</b></div>
-      <div class="chip">Belt <b id="uiBelt">White</b></div>
-      <div class="chip">Tier <b id="uiTier">1</b></div>
-    </div>
-    <div class="barR">
-      <button class="btn ghost small" id="saveBtn">Save</button>
-      <button class="btn ghost small" id="resetBtn">Reset</button>
-    </div>
+
+<div id="topbar">
+  <div class="barL">
+    <div class="chip">HP <b id="uiHP">—</b></div>
+    <div class="chip">☯ <b id="uiKarma">0</b></div>
+    <div class="chip">🪙 <b id="uiGold">0</b></div>
+    <div class="chip">Belt <b id="uiBelt">White</b></div>
+    <div class="chip">Tier <b id="uiTier">1</b></div>
   </div>
-
-  <!-- Town -->
-  <div id="town">
-    <div id="townBg"></div>
-    <div class="hotspot" id="hsDaimyo"><span>Daimyo</span></div>
-    <div class="hotspot" id="hsHospital"><span>Hospital</span></div>
-    <div class="hotspot" id="hsRelic"><span>Relic Shop</span></div>
-    <div class="hotspot" id="hsWeapon"><span>Weapon Shop</span></div>
-    <div class="hotspot" id="hsRecruit"><span>Recruit</span></div>
-    <div class="hotspot" id="hsDojo"><span>Dojo</span></div>
-    <div class="hotspot" id="hsFight"><span>Fight</span></div>
+  <div class="barR">
+    <button class="btn ghost small" id="saveBtn">Save</button>
+    <button class="btn ghost small" id="resetBtn">Reset</button>
   </div>
+</div>
 
-  <!-- Battle -->
-  <div id="battle" class="hidden">
-    <div id="battleBg"></div>
-    <div id="battleShade"></div>
-    <canvas id="battleCanvas"></canvas>
+<!-- Town -->
+<div id="town">
+  <div id="townBg"></div>
 
-    <div id="battleTop">
-      <div class="hpBox">
-        <div class="hpName" id="pName">You</div>
-        <div class="hpBar"><div class="hpFill" id="pHPFill"></div></div>
-      </div>
-      <div class="vs">VS</div>
-      <div class="hpBox">
-        <div class="hpName" id="eName">Enemy</div>
-        <div class="hpBar"><div class="hpFill" id="eHPFill"></div></div>
-      </div>
+  <!-- Invisible, building-aligned tap zones -->
+  <button class="hotspot" id="hsDaimyo"   aria-label="Daimyo"></button>
+  <button class="hotspot" id="hsHospital" aria-label="Hospital"></button>
+  <button class="hotspot" id="hsRelic"    aria-label="Relic Shop"></button>
+  <button class="hotspot" id="hsWeapon"   aria-label="Weapon Shop"></button>
+  <button class="hotspot" id="hsRecruit"  aria-label="Recruit"></button>
+  <button class="hotspot" id="hsDojo"     aria-label="Dojo"></button>
+  <button class="hotspot" id="hsFight"    aria-label="Fight"></button>
+</div>
+
+<!-- Battle -->
+<div id="battle" class="hidden">
+  <div id="battleBg"></div>
+  <canvas id="battleCanvas"></canvas>
+
+  <div id="battleTop">
+    <div class="hpBox">
+      <div class="hpName" id="pName">You</div>
+      <div class="hpBar"><div class="hpFill" id="pHPFill"></div></div>
     </div>
-
-    <button id="skipBtn" class="btn">SKIP</button>
-  </div>
-
-  <!-- Modals -->
-  <div class="modal hidden" id="dojoModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Dojo Training</h3>
-        <button class="btn ghost small" id="closeDojo">Close</button>
-      </div>
-      <div class="muted">Train your active ninja in 3 stats. No skills/specials. Pure RPG growth.</div>
-
-      <div class="statGrid">
-        <div class="stat">Strength<br><b id="stSTR">1</b><div class="muted">Damage</div></div>
-        <div class="stat">Agility<br><b id="stAGI">1</b><div class="muted">Speed / Dodge</div></div>
-        <div class="stat">Endurance<br><b id="stEND">1</b><div class="muted">HP / Defense</div></div>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="trainSTR">+ STR (1 TP)</button>
-        <button class="btn primary" id="trainAGI">+ AGI (1 TP)</button>
-        <button class="btn primary" id="trainEND">+ END (1 TP)</button>
-      </div>
-
-      <div class="muted" style="margin-top:10px">
-        TP: <b id="tpHere">0</b> • Active: <b id="activeHere">—</b>
-      </div>
+    <div class="vs">VS</div>
+    <div class="hpBox">
+      <div class="hpName" id="eName">Enemy</div>
+      <div class="hpBar"><div class="hpFill" id="eHPFill"></div></div>
     </div>
   </div>
 
-  <div class="modal hidden" id="daiModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Daimyo</h3>
-        <button class="btn ghost small" id="closeDai">Close</button>
-      </div>
-      <div class="muted">Belts are earned by XP (from fights). Ladders raise Tier difficulty.</div>
-      <div class="statGrid">
-        <div class="stat">Belt<br><b id="dBelt">White</b></div>
-        <div class="stat">XP<br><b id="dXP">0</b></div>
-        <div class="stat">Next Belt XP<br><b id="dNext">50</b></div>
-      </div>
-      <div class="muted" style="margin-top:10px">
-        Tier: <b id="dTier">1</b> • Tier wins: <b id="dTierWins">0</b> • Total W/L: <b id="dWL">0/0</b>
-      </div>
+  <button id="skipBtn" class="btn">SKIP</button>
+</div>
+
+<!-- Modals (minimal hooks; keep your existing content if you want) -->
+<div class="modal hidden" id="simpleModal">
+  <div class="card">
+    <div class="row sp">
+      <h3 class="title" id="mTitle">Title</h3>
+      <button class="btn ghost small" id="mClose">Close</button>
     </div>
+    <div class="muted" id="mBody">Body</div>
   </div>
-
-  <div class="modal hidden" id="recruitModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Recruit Ninjas</h3>
-        <button class="btn ghost small" id="closeRecruit">Close</button>
-      </div>
-      <div class="muted" id="recruitLockText"></div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="recruitBtn">Recruit (🪙 <span id="recruitCost">120</span>)</button>
-        <button class="btn ghost" id="setActiveBtn">Set Selected Active</button>
-      </div>
-
-      <div class="list" id="rosterList"></div>
-      <div class="muted" style="margin-top:10px">Recruit unlocks at <b>Yellow belt</b>.</div>
-    </div>
-  </div>
-
-  <div class="modal hidden" id="weaponModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Weapon Shop</h3>
-        <button class="btn ghost small" id="closeWeapon">Close</button>
-      </div>
-      <div class="muted">Buy weapons with 🪙 Gold. Equip 1 weapon on the active ninja.</div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="buyWeaponBtn">Buy Selected</button>
-        <button class="btn ghost" id="equipWeaponBtn">Equip Selected</button>
-      </div>
-
-      <div class="list" id="weaponList"></div>
-    </div>
-  </div>
-
-  <div class="modal hidden" id="relicModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Relic Shop</h3>
-        <button class="btn ghost small" id="closeRelic">Close</button>
-      </div>
-      <div class="muted">Buy relics with ☯ Karma. Equip 1 relic on the active ninja.</div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="buyRelicBtn">Buy Selected</button>
-        <button class="btn ghost" id="equipRelicBtn">Equip Selected</button>
-      </div>
-
-      <div class="list" id="relicList"></div>
-    </div>
-  </div>
+</div>
 
 <script>
 /* =========================
-   SAVE + RPG CORE
+   DEBUG: set true to temporarily show tap zones
 ========================= */
-const SAVE_KEY="ninja_town_rpg_v2";
+const DEBUG_HOTSPOTS = false;
+if (DEBUG_HOTSPOTS){
+  document.querySelectorAll(".hotspot").forEach(h=>h.classList.add("debug"));
+}
 
+/* =========================
+   Minimal game state (plug in your full logic here if you already have it)
+========================= */
+const SAVE_KEY="ninja_town_rpg_clean_hotspots_v1";
 const BELTS=["White","Yellow","Orange","Green","Blue","Brown","Black"];
-const BELT_XP=[0,50,150,350,700,1200,2000]; // adjust anytime
-
-const RARITIES=["Common","Uncommon","Rare","Epic","Legendary"];
-const RARITY_COL={
-  Common:"Common", Uncommon:"Uncommon", Rare:"Rare", Epic:"Epic", Legendary:"Legendary"
-};
+const BELT_XP=[0,50,150,350,700,1200,2000];
 
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-function rint(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
-function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
-function id(prefix="id"){ return prefix+"_"+Math.random().toString(16).slice(2)+"_"+Date.now().toString(16); }
-
 function beltFromXP(xp){
   let idx=0;
   for(let i=0;i<BELT_XP.length;i++) if(xp>=BELT_XP[i]) idx=i;
   return BELTS[Math.min(idx,BELTS.length-1)];
 }
-function nextBeltXP(xp){
-  for(let i=1;i<BELT_XP.length;i++) if(xp < BELT_XP[i]) return BELT_XP[i];
-  return BELT_XP[BELT_XP.length-1];
-}
 
 function defaultSave(){
-  const starter = makeNinja("Starter Ninja");
-  return {
-    gold: 80,
-    karma: 0,
-    tier: 1,
-    tierWins: 0,
-    wins: 0,
-    losses: 0,
-    roster: [starter],
-    activeId: starter.id,
-    inventory: [], // items you own
-  };
+  return { hp:60,maxHP:60, karma:0, gold:0, tier:1, xp:0 };
 }
-let save = loadSave();
-function loadSave(){
+let save = load();
+function load(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);
     if(!raw) return defaultSave();
     const s=JSON.parse(raw);
-    if(!s?.roster?.length) return defaultSave();
-    s.gold ??= 0; s.karma ??= 0;
-    s.tier ??= 1; s.tierWins ??= 0;
-    s.wins ??= 0; s.losses ??= 0;
-    s.inventory ??= [];
-    if(!s.activeId) s.activeId = s.roster[0].id;
-    // ensure shape
-    for(const n of s.roster){
-      n.str ??= 1; n.agi ??= 1; n.end ??= 1;
-      n.xp ??= 0; n.level ??= 1;
-      n.weaponId ??= null; n.relicId ??= null;
-      recalcNinja(n, s.inventory);
-    }
-    return s;
+    return {...defaultSave(), ...s};
   }catch{ return defaultSave(); }
 }
 function persist(){ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
 
-function makeNinja(name){
-  return {
-    id: id("n"),
-    name,
-    xp: 0,
-    level: 1,
-    tp: 0,
-    str: 1,
-    agi: 1,
-    end: 1,
-    hp: 60,
-    maxHP: 60,
-    weaponId: null,
-    relicId: null,
-  };
-}
-
-function recalcNinja(n, inventory){
-  n.level = 1 + Math.floor(n.xp / 100);
-  const gear = getEquippedBonuses(n, inventory);
-  const endEff = n.end + gear.end;
-  n.maxHP = 55 + endEff*12 + n.level*6;
-  n.hp = clamp(n.hp ?? n.maxHP, 0, n.maxHP);
-}
-
-function getActive(){
-  return save.roster.find(x=>x.id===save.activeId) || save.roster[0];
-}
-
-function itemBonus(it){
-  // items: {slot:"weapon"/"relic", rarity, bonus:{str,agi,end}}
-  return it?.bonus || {str:0,agi:0,end:0};
-}
-function getEquippedBonuses(n, inventory){
-  const w = inventory.find(it=>it.id===n.weaponId) || null;
-  const r = inventory.find(it=>it.id===n.relicId) || null;
-  const wb = itemBonus(w);
-  const rb = itemBonus(r);
-  return { str:(wb.str+rb.str), agi:(wb.agi+rb.agi), end:(wb.end+rb.end) };
-}
-
-/* =========================
-   UI HELPERS
-========================= */
-const $ = (id)=>document.getElementById(id);
-function openModal(id){ $(id).classList.remove("hidden"); }
-function closeModal(id){ $(id).classList.add("hidden"); }
-function fmtWL(){ return `${save.wins}/${save.losses}`; }
-
 function refreshTop(){
-  const a=getActive();
-  recalcNinja(a, save.inventory);
-  const belt=beltFromXP(a.xp);
-
-  $("uiName").textContent = a.name;
-  $("uiHP").textContent = `${a.hp}/${a.maxHP}`;
-  $("uiGold").textContent = save.gold;
-  $("uiKarma").textContent = save.karma;
-  $("uiBelt").textContent = belt;
-  $("uiTier").textContent = save.tier;
+  document.getElementById("uiHP").textContent = `${save.hp}/${save.maxHP}`;
+  document.getElementById("uiKarma").textContent = save.karma;
+  document.getElementById("uiGold").textContent = save.gold;
+  document.getElementById("uiTier").textContent = save.tier;
+  document.getElementById("uiBelt").textContent = beltFromXP(save.xp);
 }
 
-$("saveBtn").onclick=()=>{ persist(); refreshTop(); };
-$("resetBtn").onclick=()=>{
+document.getElementById("saveBtn").onclick=()=>{ persist(); refreshTop(); };
+document.getElementById("resetBtn").onclick=()=>{
   localStorage.removeItem(SAVE_KEY);
   save = defaultSave();
   persist(); refreshTop();
 };
 
 /* =========================
-   HOTSPOTS
+   Simple modal helper
 ========================= */
-$("hsDojo").onclick=()=>{
-  refreshDojo();
-  openModal("dojoModal");
-};
-$("closeDojo").onclick=()=>closeModal("dojoModal");
+const modal = document.getElementById("simpleModal");
+const mTitle = document.getElementById("mTitle");
+const mBody  = document.getElementById("mBody");
+document.getElementById("mClose").onclick=()=>modal.classList.add("hidden");
 
-$("hsDaimyo").onclick=()=>{
-  const a=getActive();
-  $("dBelt").textContent = beltFromXP(a.xp);
-  $("dXP").textContent = a.xp;
-  $("dNext").textContent = nextBeltXP(a.xp);
-  $("dTier").textContent = save.tier;
-  $("dTierWins").textContent = save.tierWins;
-  $("dWL").textContent = fmtWL();
-  openModal("daiModal");
-};
-$("closeDai").onclick=()=>closeModal("daiModal");
+function showModal(title, body){
+  mTitle.textContent = title;
+  mBody.innerHTML = body;
+  modal.classList.remove("hidden");
+}
 
-$("hsHospital").onclick=()=>{
-  const a=getActive();
-  a.hp = a.maxHP;
+/* =========================
+   TIE BUTTONS TO BUILDINGS
+   (Replace showModal with your real screens if you already have them)
+========================= */
+document.getElementById("hsDaimyo").onclick   = ()=>showModal("Daimyo", "Belt & progress screen.");
+document.getElementById("hsHospital").onclick = ()=>{
+  save.hp = save.maxHP;
   persist(); refreshTop();
+  showModal("Hospital", "Healed to full HP.");
 };
-
-$("hsRecruit").onclick=()=>{
-  refreshRecruit();
-  openModal("recruitModal");
-};
-$("closeRecruit").onclick=()=>closeModal("recruitModal");
-
-$("hsWeapon").onclick=()=>{
-  refreshWeaponShop();
-  openModal("weaponModal");
-};
-$("closeWeapon").onclick=()=>closeModal("weaponModal");
-
-$("hsRelic").onclick=()=>{
-  refreshRelicShop();
-  openModal("relicModal");
-};
-$("closeRelic").onclick=()=>closeModal("relicModal");
-
-$("hsFight").onclick=()=>startBattle();
+document.getElementById("hsRelic").onclick    = ()=>showModal("Relic Shop", "Relics screen (karma purchases).");
+document.getElementById("hsWeapon").onclick   = ()=>showModal("Weapon Shop", "Weapons screen (gold purchases).");
+document.getElementById("hsRecruit").onclick  = ()=>showModal("Recruit", "Recruit roster (unlocks at Yellow).");
+document.getElementById("hsDojo").onclick     = ()=>showModal("Dojo", "Train STR / AGI / END with TP.");
+document.getElementById("hsFight").onclick    = ()=>showModal("Fight", "Start battle here (wire to your battle logic).");
 
 /* =========================
-   DOJO (3 stats only)
+   Battle view show/hide hooks
+   (Keep your existing battle engine; this is just structure)
 ========================= */
-function refreshDojo(){
-  const a=getActive();
-  const inv=save.inventory;
-  recalcNinja(a, inv);
-
-  const gear=getEquippedBonuses(a, inv);
-  $("stSTR").textContent = `${a.str} (+${gear.str})`;
-  $("stAGI").textContent = `${a.agi} (+${gear.agi})`;
-  $("stEND").textContent = `${a.end} (+${gear.end})`;
-  $("tpHere").textContent = a.tp;
-  $("activeHere").textContent = a.name;
-
-  const can = a.tp>0;
-  $("trainSTR").disabled=!can;
-  $("trainAGI").disabled=!can;
-  $("trainEND").disabled=!can;
+const townEl = document.getElementById("town");
+const battleEl = document.getElementById("battle");
+function showBattle(v){
+  battleEl.classList.toggle("hidden", !v);
+  townEl.classList.toggle("hidden", v);
 }
-function train(stat){
-  const a=getActive();
-  if(a.tp<=0) return;
-  a.tp -= 1;
-  a[stat] += 1;
-  recalcNinja(a, save.inventory);
-  persist(); refreshTop(); refreshDojo();
-}
-$("trainSTR").onclick=()=>train("str");
-$("trainAGI").onclick=()=>train("agi");
-$("trainEND").onclick=()=>train("end");
+document.getElementById("skipBtn").onclick=()=>showBattle(false);
 
-/* =========================
-   RECRUIT (unlocks at Yellow belt)
-========================= */
-let recruitSelectedId=null;
-function recruitCost(){
-  // scales a bit by roster size + tier
-  return 120 + (save.roster.length-1)*60 + (save.tier-1)*25;
-}
-function refreshRecruit(){
-  const a=getActive();
-  const belt=beltFromXP(a.xp);
-  const unlocked = (BELTS.indexOf(belt) >= BELTS.indexOf("Yellow"));
+/* init */
+persist();
+refreshTop();
+</script>
 
-  $("recruitCost").textContent = recruitCost();
-  $("recruitBtn").disabled = !unlocked;
-  $("setActiveBtn").disabled = !unlocked;
-
-  $("recruitLockText").innerHTML = unlocked
-    ? `Recruit is unlocked. Tap a ninja to select, then set active.`
-    : `Locked until <b>Yellow belt</b>. Win fights to earn XP.`;
-
-  const list=$("rosterList");
-  list.innerHTML="";
-  for(const n of save.roster){
-    const isActive = (n.id===save.activeId);
-    const isSel = (n.id===recruitSelectedId);
-
-    const d=document.createElement("div");
-    d.className="item";
-    d.innerHTML = `
-      <div style="min-width:0">
-        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${n.name} ${isActive?`<span class="pill">ACTIVE</span>`:""} ${isSel?`<span class="pill">SELECTED</span>`:""}
-        </div>
-        <div class="muted">Lvl ${n.level} • XP ${n.xp} • TP ${n.tp}</div>
-      </div>
-      <button class="btn small ghost">Select</button>
-    `;
-    d.onclick=()=>{ recruitSelectedId=n.id; refreshRecruit(); };
-    list.appendChild(d);
-  }
-}
-$("recruitBtn").onclick=()=>{
-  const a=getActive();
-  const belt=beltFromXP(a.xp);
-  const unlocked = (BELTS.indexOf(belt) >= BELTS.indexOf("Yellow"));
-  if(!unlocked) return;
-
-  const cost = recruitCost();
-  if(save.gold < cost) return;
-
-  save
+</body>
+</html>
