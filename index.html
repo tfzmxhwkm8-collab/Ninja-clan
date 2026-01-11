@@ -1,15 +1,14 @@
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Ninja Town RPG</title>
 <style>
   html,body{
     margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
     font-family:system-ui,-apple-system,Segoe UI,Roboto;
-    touch-action:manipulation;
-    -webkit-user-select:none;user-select:none;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none
   }
   :root{
     --pad-top: env(safe-area-inset-top);
@@ -39,8 +38,7 @@
     display:flex;gap:8px;align-items:center;
     background:rgba(255,255,255,.25);
     border:1px solid rgba(0,0,0,.14);
-    border-radius:999px;padding:6px 10px;
-    font-weight:950;font-size:12px;
+    border-radius:999px;padding:6px 10px;font-weight:950;font-size:12px;
   }
   .chip b{font-family:ui-monospace,Menlo,monospace}
   .btn{
@@ -52,20 +50,20 @@
   .btn.small{padding:8px 10px;font-size:12px;border-radius:11px}
   .btn:disabled{opacity:.55}
 
-  /* ===== Town ===== */
+  /* ===== Town screen ===== */
   #town{
     position:absolute; inset:0;
     padding-top:calc(64px + var(--pad-top));
   }
   #townBg{
     position:absolute; inset:0;
+    background-image:url("town.jpg");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
-    filter:saturate(1.02) contrast(1.01);
   }
 
-  /* Invisible hit areas (NO rectangles) */
+  /* Invisible click areas (no rectangles) */
   .hotspot{
     position:absolute;
     background:transparent;
@@ -75,14 +73,10 @@
     z-index:10;
     touch-action:manipulation;
   }
-  /* Optional debug (set DEBUG_HOTSPOTS=true in JS) */
-  .hotspot.debug{
-    background:rgba(255,255,255,.12);
-    outline:2px solid rgba(255,255,255,.22);
-    backdrop-filter: blur(2px);
-  }
+  /* OPTIONAL: debug hit zones */
+  .hotspot.debug{ background:rgba(255,255,255,.12); outline:2px solid rgba(255,255,255,.20); }
 
-  /* Tuned for iPhone layout */
+  /* Hit zone positions */
   #hsDaimyo   { left:  4%; top: 14%; width: 28%; height: 22%; }
   #hsHospital { left: 30%; top: 24%; width: 26%; height: 20%; }
   #hsRelic    { left: 54%; top: 18%; width: 28%; height: 22%; }
@@ -121,8 +115,10 @@
   }
   .stat b{font-family:ui-monospace,Menlo,monospace;font-size:13px}
   .list{
-    margin-top:10px; max-height:320px; overflow:auto;
-    border-radius:14px; border:1px solid rgba(0,0,0,.14);
+    margin-top:10px;
+    max-height:320px; overflow:auto;
+    border-radius:14px;
+    border:1px solid rgba(0,0,0,.14);
     background:rgba(255,255,255,.22);
   }
   .item{
@@ -149,6 +145,7 @@
   #battle{ position:absolute; inset:0; z-index:60; }
   #battleBg{
     position:absolute; inset:0;
+    background-image:url("battle.jpg");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
@@ -190,7 +187,7 @@
 <body>
   <div id="topbar">
     <div class="barL">
-      <div class="chip">Build <b>v4-ACTIONS</b></div>
+      <div class="chip">Build <b>v4-ACTIONS-IMG</b></div>
       <div class="chip">Active <b id="uiName">—</b></div>
       <div class="chip">HP <b id="uiHP">—</b></div>
       <div class="chip">☯ <b id="uiKarma">0</b></div>
@@ -208,7 +205,6 @@
   <div id="town">
     <div id="townBg"></div>
 
-    <!-- Invisible building hit-zones -->
     <button class="hotspot" id="hsDaimyo"   aria-label="Daimyo"></button>
     <button class="hotspot" id="hsHospital" aria-label="Hospital"></button>
     <button class="hotspot" id="hsRelic"    aria-label="Relic Shop"></button>
@@ -345,22 +341,14 @@
 
 <script>
 /* =========================
-   Embedded images (no extra files)
+   Startup image check (shows alert if missing)
 ========================= */
-const TOWN_B64 =
-/* town.jpg base64 */ `
-{{TOWN_B64}}
-`.trim();
-
-const BATTLE_B64 =
-/* battle.jpg base64 */ `
-{{BATTLE_B64}}
-`.trim();
-
-document.getElementById("townBg").style.backgroundImage =
-  "url('data:image/jpeg;base64," + TOWN_B64 + "')";
-document.getElementById("battleBg").style.backgroundImage =
-  "url('data:image/jpeg;base64," + BATTLE_B64 + "')";
+(function checkTownImage(){
+  const img = new Image();
+  img.onload = () => console.log("town.jpg loaded OK");
+  img.onerror = () => alert("ERROR: town.jpg not found. Make sure town.jpg is next to index.html and the name is EXACT (lowercase).");
+  img.src = "town.jpg?v=" + Date.now(); // cache-bust
+})();
 
 /* =========================
    OPTIONAL debug hitzones
@@ -371,9 +359,9 @@ if (DEBUG_HOTSPOTS){
 }
 
 /* =========================
-   Game logic (real actions)
+   Helpers + Core
 ========================= */
-const SAVE_KEY="ninja_town_rpg_v4_actions_embed";
+const SAVE_KEY="ninja_town_rpg_actions_v4_img";
 const $ = (id)=>document.getElementById(id);
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function rand(a,b){ return a + Math.random()*(b-a); }
@@ -469,11 +457,9 @@ function activeNinja(){ return findNinja(save.activeNinjaId); }
 function getEquipBonus(n){
   const w = n.equip.weaponId ? invWeaponById(n.equip.weaponId) : null;
   const r = n.equip.relicId ? invRelicById(n.equip.relicId) : null;
-  return {
-    str:(w?.bonus?.str||0) + (r?.bonus?.str||0),
-    agi:(w?.bonus?.agi||0) + (r?.bonus?.agi||0),
-    end:(w?.bonus?.end||0) + (r?.bonus?.end||0),
-  };
+  return { str:(w?.bonus?.str||0) + (r?.bonus?.str||0),
+           agi:(w?.bonus?.agi||0) + (r?.bonus?.agi||0),
+           end:(w?.bonus?.end||0) + (r?.bonus?.end||0) };
 }
 function recalcNinja(s,n){
   n.level = 1 + Math.floor((n.xp||0)/100);
@@ -773,7 +759,7 @@ function drawNinja(x,y,flip=false,weapon="katana"){
 
   ctx.restore();
 }
-const floatTexts=[];
+const floatTexts=[]; let dust=null;
 function addFloatText(text,x,y,color="#ff3a3a"){ floatTexts.push({text,x,y,vy:-0.65,t:0,color}); }
 function drawFloatTexts(){
   for(const ft of floatTexts){
@@ -787,7 +773,6 @@ function drawFloatTexts(){
   }
   for(let i=floatTexts.length-1;i>=0;i--) if(floatTexts[i].t>60) floatTexts.splice(i,1);
 }
-let dust=null;
 function spawnDust(x,y){ dust={x,y,t:0}; }
 function drawDust(){
   if(!dust) return;
@@ -827,19 +812,21 @@ function makeEnemy(){
 
   return {name, level:lvl, maxHP, hp:maxHP, atk, spd, dodge, def};
 }
-
 function gainRewards(win, enemy){
   const a=activeNinja();
   const tier=save.ladder.tier;
   if(win){
     save.ladder.wins++;
     save.ladder.winsThisTier++;
+
     a.xp += Math.round(18 + enemy.level*6 + tier*4);
     a.tp += 1;
     save.currency.gold += Math.round(25 + tier*18 + enemy.level*6);
     save.currency.karma += Math.round(8 + tier*6);
+
     recalcNinja(save,a);
     a.hp = clamp(a.hp + Math.floor(a.maxHP*0.12), 1, a.maxHP);
+
     if(save.ladder.winsThisTier >= 3){
       save.ladder.tier += 1;
       save.ladder.winsThisTier = 0;
@@ -851,7 +838,7 @@ function gainRewards(win, enemy){
   }
   persist(); refreshTop();
 }
-
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function fastSim(a, enemy){
   const pDps = Math.max(1, (a._derived.atk - enemy.def)) * (1000/(520/a._derived.spd));
   const eDps = Math.max(1, (enemy.atk - a._derived.def)) * (1000/(560/enemy.spd));
@@ -863,25 +850,18 @@ function fastSim(a, enemy){
   else { enemy.hp = Math.max(1, Math.floor(enemy.hp - pDps*tP)); a.hp=0; }
   return win;
 }
-
 function renderFrame(px,ex,y,pW,eW){
   ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
   ctx.fillStyle="rgba(0,0,0,.06)";
   ctx.fillRect(0, y+10, window.innerWidth, 120);
-
   drawNinja(window.innerWidth*0.12, y-30, false, "katana");
   drawNinja(window.innerWidth*0.16, y-2, false, "staff");
   drawNinja(window.innerWidth*0.10, y+26, false, "katana");
-
   drawNinja(px, y, false, pW);
   drawNinja(ex, y, true, eW);
-
   drawDust();
   drawFloatTexts();
 }
-
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
 async function startBattle(){
   if(battling) return;
   battling=true; skip=false;
@@ -900,7 +880,6 @@ async function startBattle(){
   let ex=window.innerWidth*0.78;
   const y=window.innerHeight*0.63;
   const meet = window.innerWidth*0.52;
-
   const pW = pick(["katana","staff"]);
   const eW = pick(["katana","staff"]);
 
@@ -954,12 +933,9 @@ async function startBattle(){
   showBattle(false);
   battling=false;
 }
-
 $("skipBtn").onclick=()=>{ skip=true; };
 
-/* =========================
-   Tie buildings to REAL actions
-========================= */
+/* Building taps = real actions */
 $("hsDojo").onclick=()=>{ renderDojo(); openModal("dojoModal"); };
 $("hsDaimyo").onclick=()=>{ renderDaimyo(); openModal("daiModal"); };
 $("hsRecruit").onclick=()=>{ rosterSelectedId = save.activeNinjaId; renderRoster(); openModal("recruitModal"); };
@@ -968,21 +944,10 @@ $("hsRelic").onclick=()=>{ relicSelectedId = save.shop.relics?.[0]?.id || null; 
 $("hsHospital").onclick=()=>{ const a=activeNinja(); recalcNinja(save,a); a.hp=a.maxHP; persist(); refreshTop(); };
 $("hsFight").onclick=()=>startBattle();
 
-/* =========================
-   Init
-========================= */
+/* Init */
 persist();
 refreshTop();
-console.log("Loaded build v4-ACTIONS");
-</script>
-
-<script>
-/* =========================
-   Inject base64 safely (DO NOT EDIT)
-========================= */
-(function(){
-  // replace placeholders with actual base64 (already embedded below)
-})();
+console.log("Loaded v4-ACTIONS-IMG");
 </script>
 
 </body>
