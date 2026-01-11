@@ -1,0 +1,1334 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ninja Clan Wars (3D)</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;touch-action:none;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #c{width:100%;height:100%;display:block;touch-action:none}
+
+  :root{
+    --pad-top: env(safe-area-inset-top);
+    --pad-right: env(safe-area-inset-right);
+    --pad-bottom: env(safe-area-inset-bottom);
+    --pad-left: env(safe-area-inset-left);
+  }
+  *{-webkit-tap-highlight-color:transparent}
+
+  /* UI root */
+  #ui{position:absolute;inset:0;pointer-events:none;color:#fff}
+  .screen{position:absolute;inset:0;padding:
+    calc(14px + var(--pad-top)) calc(14px + var(--pad-right))
+    calc(14px + var(--pad-bottom)) calc(14px + var(--pad-left));
+    display:none;pointer-events:none}
+  .screen.active{display:block}
+  .panel{pointer-events:auto;background:rgba(0,0,0,.62);
+    border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;
+    backdrop-filter:blur(8px);box-shadow:0 12px 30px rgba(0,0,0,.28)}
+  .title{font-weight:1000;font-size:16px;letter-spacing:.2px;margin:0 0 6px}
+  .hint{font-size:12px;opacity:.88;line-height:1.25}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sp{justify-content:space-between}
+  .btn{pointer-events:auto;border:0;border-radius:14px;padding:12px 14px;
+    font-weight:950;background:rgba(255,255,255,.92);color:#111}
+  .btn.primary{background:rgba(255,122,24,.98)}
+  .btn.ghost{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.16)}
+  .btn.small{padding:9px 11px;border-radius:12px;font-size:12px;font-weight:900}
+  .btn:disabled{opacity:.55}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;padding:10px 12px;font-size:12px}
+  .stat b{font-size:13px}
+  .list{max-height:320px;overflow:auto;border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
+  .item{display:flex;justify-content:space-between;align-items:center;
+    padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);gap:10px;font-size:12px}
+  .item:last-child{border-bottom:0}
+  .pill{padding:4px 8px;border-radius:999px;font-size:11px;background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.12);opacity:.95}
+  .rar{font-weight:950}
+  .rar.Common{color:#ddd}
+  .rar.Uncommon{color:#9bfaa2}
+  .rar.Rare{color:#74b7ff}
+  .rar.Epic{color:#d58bff}
+  .rar.Legendary{color:#ffcf66}
+
+  /* Battle HUD */
+  #hud{position:absolute;inset:0;display:none;pointer-events:none}
+  #hud.active{display:block}
+  #topBar{position:absolute;top:calc(10px + var(--pad-top));
+    left:calc(10px + var(--pad-left));right:calc(10px + var(--pad-right));
+    display:flex;gap:10px;justify-content:space-between;pointer-events:none}
+  .chip{pointer-events:none;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;padding:10px 12px;font-size:12px;max-width:33%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #logLine{position:absolute;top:calc(62px + var(--pad-top));
+    left:calc(10px + var(--pad-left));right:calc(10px + var(--pad-right));
+    display:flex;justify-content:center;pointer-events:none}
+  #logChip{pointer-events:none;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;padding:10px 12px;font-size:12px;max-width:92%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #joy{position:absolute;left:calc(14px + var(--pad-left));
+    bottom:calc(14px + var(--pad-bottom));width:150px;height:150px;
+    pointer-events:auto;touch-action:none}
+  .joyBase{position:absolute;inset:0;border-radius:999px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(6px)}
+  .joyStick{position:absolute;width:64px;height:64px;left:50%;top:50%;
+    transform:translate(-50%,-50%);border-radius:999px;background:rgba(255,122,24,.90);
+    box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  #actions{position:absolute;right:calc(14px + var(--pad-right));
+    bottom:calc(14px + var(--pad-bottom));display:grid;grid-template-columns:76px 76px;gap:10px;
+    pointer-events:auto;touch-action:none}
+  #dock{position:absolute;left:calc(180px + var(--pad-left));
+    right:calc(180px + var(--pad-right));
+    bottom:calc(18px + var(--pad-bottom));display:flex;justify-content:center;
+    pointer-events:auto;touch-action:none}
+  #startBtn{width:min(400px,100%);border:0;border-radius:18px;padding:16px 18px;
+    font-weight:1000;font-size:15px;background:rgba(255,122,24,.98);color:#111;
+    box-shadow:0 10px 26px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <!-- HOME -->
+  <div class="screen active" id="homeScreen">
+    <div class="panel" style="width:min(560px,100%);">
+      <div class="row sp">
+        <div>
+          <div class="title">Ninja Clan Wars (3D)</div>
+          <div class="hint">Build your lineup • Equip gear • Fight ladder clans • Earn karma • Rank belts</div>
+        </div>
+        <button class="btn ghost small" id="wipeBtn">Wipe Save</button>
+      </div>
+
+      <div class="grid2" style="margin-top:12px;">
+        <div class="stat">Karma<br><b class="mono" id="homeKarma">0</b></div>
+        <div class="stat">Belt<br><b class="mono" id="homeBelt">White</b></div>
+        <div class="stat">Roster<br><b class="mono" id="homeRoster">0</b></div>
+        <div class="stat">Ladder<br><b class="mono" id="homeLadder">Tier 1</b></div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn primary" id="toTeam">TEAM</button>
+        <button class="btn" id="toDojo">DOJO</button>
+        <button class="btn" id="toBattle">BATTLE</button>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        Battle tips: In <b>QUEUE</b> mode your front ninja fights theirs one-by-one. In <b>BRAWL</b> mode everyone attacks at once.
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM -->
+  <div class="screen" id="teamScreen">
+    <div class="panel" style="width:min(980px,100%);">
+      <div class="row sp">
+        <div>
+          <div class="title">Team Builder</div>
+          <div class="hint">Tap ADD/REMOVE to set your 4-ninja lineup. Equip items from inventory.</div>
+        </div>
+        <div class="row">
+          <button class="btn ghost small" id="teamHome">HOME</button>
+          <button class="btn primary small" id="recruitBtn">RECRUIT</button>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;align-items:flex-start;">
+        <div style="flex:1 1 520px;">
+          <div class="hint" style="font-weight:950;margin-bottom:6px;">Roster</div>
+          <div class="list" id="rosterList"></div>
+        </div>
+
+        <div style="flex:0 0 360px;">
+          <div class="hint" style="font-weight:950;margin-bottom:6px;">Lineup (4)</div>
+          <div class="list" id="lineupList"></div>
+
+          <div class="hint" style="font-weight:950;margin:12px 0 6px;">Inventory</div>
+          <div class="list" id="invList"></div>
+
+          <div class="hint" style="margin-top:10px;">
+            Equip: tap a ninja’s <b>WEAPON / ARMOR / TRINKET</b> button and then tap an item in inventory to equip it.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOJO -->
+  <div class="screen" id="dojoScreen">
+    <div class="panel" style="width:min(760px,100%);">
+      <div class="row sp">
+        <div>
+          <div class="title">Dojo / Ladder</div>
+          <div class="hint">Switch modes, queue a match, and grind karma + gear.</div>
+        </div>
+        <div class="row">
+          <button class="btn ghost small" id="dojoHome">HOME</button>
+          <button class="btn primary small" id="queueBtn">QUEUE MATCH</button>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:12px;">
+        <div class="stat">
+          Mode<br>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn small" id="modeQueue">QUEUE</button>
+            <button class="btn small ghost" id="modeBrawl">BRAWL</button>
+          </div>
+          <div class="hint" style="margin-top:8px;">QUEUE = one-by-one. BRAWL = all-at-once.</div>
+        </div>
+        <div class="stat">
+          Ladder<br>
+          <b class="mono" id="dojoLadder">Tier 1 • W0 L0</b>
+          <div class="hint" style="margin-top:8px;">Win 3 matches to rank up a tier (harder enemies, better loot odds).</div>
+        </div>
+      </div>
+
+      <div class="hint" style="font-weight:950;margin:12px 0 6px;">Last Rewards</div>
+      <div class="list" id="rewardsList"></div>
+    </div>
+  </div>
+
+  <!-- BATTLE SCREEN (card only; actual HUD is separate) -->
+  <div class="screen" id="battleScreen">
+    <div class="panel" style="width:min(860px,100%);">
+      <div class="row sp">
+        <div>
+          <div class="title">Battle</div>
+          <div class="hint">Use buttons below. Skill applies different effects. Speed makes battles faster.</div>
+        </div>
+        <button class="btn ghost small" id="battleHome">HOME</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile HUD -->
+  <div id="hud">
+    <div id="topBar">
+      <div class="chip">A: <b class="mono" id="sumA"></b></div>
+      <div class="chip">Mode: <b class="mono" id="sumMode"></b></div>
+      <div class="chip">B: <b class="mono" id="sumB"></b></div>
+    </div>
+    <div id="logLine"><div id="logChip"><span class="mono" id="logText">Ready</span></div></div>
+
+    <div id="joy">
+      <div class="joyBase"></div>
+      <div class="joyStick" id="joyStick"></div>
+    </div>
+
+    <div id="actions">
+      <button class="btn primary small" id="atkBtn">ATTACK</button>
+      <button class="btn small" id="skillBtn">SKILL</button>
+      <button class="btn small" id="autoBtn">AUTO</button>
+      <button class="btn small" id="spdBtn">x1</button>
+    </div>
+
+    <div id="dock">
+      <button id="startBtn">START BATTLE</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+/* =========================
+   GAME CONSTANTS
+========================= */
+const BELTS=["White","Yellow","Orange","Green","Blue","Brown","Black"];
+const BELT_THRESH=[0,30,70,120,180,260,360];
+
+const RARITIES=["Common","Uncommon","Rare","Epic","Legendary"];
+const RARITY_COLORS={
+  Common:"#ddd",Uncommon:"#9bfaa2",Rare:"#74b7ff",Epic:"#d58bff",Legendary:"#ffcf66"
+};
+const RARITY_MULT={Common:1.00,Uncommon:1.08,Rare:1.18,Epic:1.30,Legendary:1.45};
+
+const SAVE_KEY="ninja_clan_wars_singlefile_v3";
+
+/* =========================
+   SAVE / LOAD
+========================= */
+function defaultSave(){
+  const roster=[...Array(6)].map(()=>makeNinja());
+  const inv=[
+    makeItem("weapon","Common","Training Katana"),
+    makeItem("armor","Common","Cloth Gi"),
+    makeItem("trinket","Common","Lucky Charm"),
+    rollItem(1),rollItem(1)
+  ];
+  return {
+    clan:{
+      name:"Clan A",
+      karma:0,
+      belt:"White",
+      ladder:{tier:1,wins:0,losses:0},
+      mode:"QUEUE", // QUEUE or BRAWL
+      roster,
+      lineup: roster.slice(0,4).map(n=>n.id),
+      inventory: inv,
+      lastRewards: []
+    }
+  };
+}
+let save = loadSave();
+function loadSave(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    const s=raw?JSON.parse(raw):defaultSave();
+    s.clan ??= defaultSave().clan;
+    s.clan.roster ??= [];
+    s.clan.lineup ??= [];
+    s.clan.inventory ??= [];
+    s.clan.lastRewards ??= [];
+    s.clan.ladder ??= {tier:1,wins:0,losses:0};
+    if(!s.clan.roster.length){
+      const d=defaultSave();
+      return d;
+    }
+    // ensure gear
+    for(const n of s.clan.roster){
+      n.gear ??= {weapon:null,armor:null,trinket:null};
+      n.loadout ??= {skill:"Power Strike"}; // one skill button picks best skill for now
+    }
+    s.clan.belt = beltFromKarma(s.clan.karma);
+    return s;
+  }catch{
+    return defaultSave();
+  }
+}
+function saveNow(){ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
+
+/* =========================
+   PROGRESSION
+========================= */
+function beltFromKarma(k){
+  let idx=0;
+  for(let i=0;i<BELT_THRESH.length;i++) if(k>=BELT_THRESH[i]) idx=i;
+  return BELTS[Math.min(idx,BELTS.length-1)];
+}
+
+/* =========================
+   NINJAS + ITEMS
+========================= */
+function id(prefix="id"){ return prefix+"_"+Math.random().toString(16).slice(2)+"_"+Date.now().toString(16); }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+function makeNinja(){
+  const first=["Ryu","Hana","Jin","Kira","Sora","Mako","Taro","Yumi","Akio","Ren","Aya","Kai","Noa","Rin"];
+  const last=["Shadow","Steel","Blaze","Mist","Fang","Lotus","Night","Storm","Viper","Drift"];
+  const seed=Math.random();
+  return {
+    id:id("n"),
+    name: `${pick(first)} ${pick(last)}`,
+    level:1,
+    xp:0,
+    base:{
+      maxHP: 60 + Math.floor(seed*45),
+      atk:   8  + Math.floor(seed*10),
+      def:   2  + Math.floor(seed*6),
+      spd:   1.6 + seed*1.0,
+      crit:  clamp(0.05 + seed*0.12, 0.05, 0.18),
+    },
+    gear:{weapon:null,armor:null,trinket:null},
+    loadout:{skill: pick(["Power Strike","Shuriken","Meditate"])}
+  };
+}
+
+function makeItem(slot, rarity, name){
+  const mult = RARITY_MULT[rarity] ?? 1;
+  const stats = {maxHP:0, atk:0, def:0, crit:0};
+  if(slot==="weapon"){ stats.atk=Math.round(3*mult); stats.crit=0.01*(RARITIES.indexOf(rarity)+1); }
+  if(slot==="armor"){ stats.def=Math.round(2*mult); stats.maxHP=Math.round(6*mult); }
+  if(slot==="trinket"){ stats.maxHP=Math.round(4*mult); stats.crit=0.02*(RARITIES.indexOf(rarity)+1); }
+  return { id:id("it"), slot, rarity, name, stats };
+}
+
+function rollItem(tier){
+  const r=Math.random();
+  let rarity="Common";
+  if(r < 0.05 + tier*0.006) rarity="Legendary";
+  else if(r < 0.10 + tier*0.010) rarity="Epic";
+  else if(r < 0.22 + tier*0.016) rarity="Rare";
+  else if(r < 0.48 + tier*0.020) rarity="Uncommon";
+
+  const slot=pick(["weapon","armor","trinket"]);
+  const names={
+    weapon:["Training Katana","Steel Tanto","Moon Blade","Crimson Edge","Storm Shuriken"],
+    armor:["Cloth Gi","Leather Wraps","Iron Vest","Shadow Robe","Dragon Armor"],
+    trinket:["Lucky Charm","Smoke Ring","Focus Bead","Karma Seal","Phoenix Feather"]
+  };
+  return makeItem(slot, rarity, pick(names[slot]));
+}
+
+function invById(){
+  const m=new Map();
+  for(const it of save.clan.inventory) m.set(it.id,it);
+  return m;
+}
+
+function applyGear(base, gear, invMap){
+  const out={...base};
+  for(const slot of ["weapon","armor","trinket"]){
+    const id=gear?.[slot]; if(!id) continue;
+    const it=invMap.get(id); if(!it) continue;
+    out.maxHP += it.stats.maxHP||0;
+    out.atk += it.stats.atk||0;
+    out.def += it.stats.def||0;
+    out.crit = Math.min(0.25, out.crit + (it.stats.crit||0));
+  }
+  return out;
+}
+
+/* =========================
+   UI HELPERS
+========================= */
+const UI={
+  home:document.getElementById("homeScreen"),
+  team:document.getElementById("teamScreen"),
+  dojo:document.getElementById("dojoScreen"),
+  battle:document.getElementById("battleScreen"),
+  hud:document.getElementById("hud"),
+
+  homeKarma:document.getElementById("homeKarma"),
+  homeBelt:document.getElementById("homeBelt"),
+  homeRoster:document.getElementById("homeRoster"),
+  homeLadder:document.getElementById("homeLadder"),
+
+  rosterList:document.getElementById("rosterList"),
+  lineupList:document.getElementById("lineupList"),
+  invList:document.getElementById("invList"),
+
+  dojoLadder:document.getElementById("dojoLadder"),
+  rewardsList:document.getElementById("rewardsList"),
+
+  sumA:document.getElementById("sumA"),
+  sumB:document.getElementById("sumB"),
+  sumMode:document.getElementById("sumMode"),
+  logText:document.getElementById("logText"),
+
+  toTeam:document.getElementById("toTeam"),
+  toDojo:document.getElementById("toDojo"),
+  toBattle:document.getElementById("toBattle"),
+  teamHome:document.getElementById("teamHome"),
+  dojoHome:document.getElementById("dojoHome"),
+  battleHome:document.getElementById("battleHome"),
+  recruitBtn:document.getElementById("recruitBtn"),
+  queueBtn:document.getElementById("queueBtn"),
+  wipeBtn:document.getElementById("wipeBtn"),
+
+  modeQueue:document.getElementById("modeQueue"),
+  modeBrawl:document.getElementById("modeBrawl"),
+
+  startBtn:document.getElementById("startBtn"),
+  atkBtn:document.getElementById("atkBtn"),
+  skillBtn:document.getElementById("skillBtn"),
+  autoBtn:document.getElementById("autoBtn"),
+  spdBtn:document.getElementById("spdBtn"),
+
+  joyZone:document.getElementById("joy"),
+  joyStick:document.getElementById("joyStick"),
+};
+
+function showScreen(name){
+  for(const s of [UI.home,UI.team,UI.dojo,UI.battle]) s.classList.remove("active");
+  UI.hud.classList.remove("active");
+  if(name==="home") UI.home.classList.add("active");
+  if(name==="team") UI.team.classList.add("active");
+  if(name==="dojo") UI.dojo.classList.add("active");
+  if(name==="battle"){ UI.battle.classList.add("active"); UI.hud.classList.add("active"); }
+}
+
+function renderHome(){
+  save.clan.belt = beltFromKarma(save.clan.karma);
+  UI.homeKarma.textContent = save.clan.karma;
+  UI.homeBelt.textContent = save.clan.belt;
+  UI.homeRoster.textContent = save.clan.roster.length;
+  UI.homeLadder.textContent = `Tier ${save.clan.ladder.tier} • W${save.clan.ladder.wins} L${save.clan.ladder.losses}`;
+}
+
+let gearTarget = null; // { ninjaId, slot }
+function renderTeam(){
+  const invMap=invById();
+  UI.rosterList.innerHTML="";
+  for(const n of save.clan.roster){
+    const inLineup = save.clan.lineup.includes(n.id);
+    const stats = applyGear(n.base, n.gear, invMap);
+    const div=document.createElement("div");
+    div.className="item";
+    div.innerHTML=`
+      <div style="min-width:0;">
+        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${n.name} <span class="pill">Lv${n.level}</span> <span class="pill">Skill: ${n.loadout.skill}</span>
+        </div>
+        <div class="mono" style="opacity:.9;font-size:11px;">
+          HP${stats.maxHP} ATK${stats.atk} DEF${stats.def} CRIT${Math.round(stats.crit*100)}%
+        </div>
+        <div class="hint" style="margin-top:4px;">
+          Gear:
+          <button class="btn small ghost" data-gear="${n.id}|weapon">WEAPON</button>
+          <button class="btn small ghost" data-gear="${n.id}|armor">ARMOR</button>
+          <button class="btn small ghost" data-gear="${n.id}|trinket">TRINKET</button>
+          ${gearTarget && gearTarget.ninjaId===n.id ? `<span class="pill">Choosing ${gearTarget.slot.toUpperCase()}…</span>` : ``}
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end;gap:8px;">
+        ${inLineup ? `<span class="pill">Lineup</span>` : ``}
+        <button class="btn small ${inLineup?"ghost":"primary"}" data-toggle="${n.id}">
+          ${inLineup?"REMOVE":"ADD"}
+        </button>
+      </div>
+    `;
+    UI.rosterList.appendChild(div);
+  }
+
+  UI.rosterList.querySelectorAll("button[data-toggle]").forEach(b=>{
+    b.onclick=()=>{
+      const id=b.getAttribute("data-toggle");
+      const inL=save.clan.lineup.includes(id);
+      if(inL) save.clan.lineup=save.clan.lineup.filter(x=>x!==id);
+      else if(save.clan.lineup.length<4) save.clan.lineup.push(id);
+      saveNow(); renderTeam();
+    };
+  });
+
+  UI.rosterList.querySelectorAll("button[data-gear]").forEach(b=>{
+    b.onclick=()=>{
+      const [nid,slot]=b.getAttribute("data-gear").split("|");
+      gearTarget = { ninjaId:nid, slot };
+      renderTeam();
+      renderInventory(); // highlight equip mode
+    };
+  });
+
+  // lineup list
+  UI.lineupList.innerHTML="";
+  for(let i=0;i<4;i++){
+    const id=save.clan.lineup[i]||null;
+    const n=id?save.clan.roster.find(x=>x.id===id):null;
+    const div=document.createElement("div");
+    div.className="item";
+    div.innerHTML=`
+      <div style="min-width:0;">
+        <div style="font-weight:1000;">Slot ${i+1}</div>
+        <div class="mono" style="opacity:.9;font-size:11px;">${n?n.name:"Empty"}</div>
+      </div>
+      <div class="row">
+        ${n?`<button class="btn small ghost" data-up="${i}">↑</button>
+             <button class="btn small ghost" data-dn="${i}">↓</button>`:""}
+      </div>
+    `;
+    UI.lineupList.appendChild(div);
+  }
+  UI.lineupList.querySelectorAll("button[data-up]").forEach(b=>{
+    b.onclick=()=>{
+      const i=Number(b.getAttribute("data-up"));
+      if(i<=0) return;
+      const arr=save.clan.lineup;
+      [arr[i-1],arr[i]]=[arr[i],arr[i-1]];
+      saveNow(); renderTeam();
+    };
+  });
+  UI.lineupList.querySelectorAll("button[data-dn]").forEach(b=>{
+    b.onclick=()=>{
+      const i=Number(b.getAttribute("data-dn"));
+      const arr=save.clan.lineup;
+      if(i>=arr.length-1) return;
+      [arr[i+1],arr[i]]=[arr[i],arr[i+1]];
+      saveNow(); renderTeam();
+    };
+  });
+
+  renderInventory();
+}
+
+function renderInventory(){
+  UI.invList.innerHTML="";
+  // small filter: show only items of chosen slot while equipping
+  const slotFilter = gearTarget?.slot ?? null;
+
+  const items = save.clan.inventory.slice().reverse();
+  for(const it of items){
+    if(slotFilter && it.slot!==slotFilter) continue;
+    const div=document.createElement("div");
+    div.className="item";
+    div.innerHTML=`
+      <div style="min-width:0;">
+        <div style="font-weight:1000;">
+          ${it.name}
+          <span class="pill rar ${it.rarity}">${it.rarity}</span>
+          <span class="pill">${it.slot.toUpperCase()}</span>
+        </div>
+        <div class="mono" style="opacity:.9;font-size:11px;">
+          +HP${it.stats.maxHP} +ATK${it.stats.atk} +DEF${it.stats.def} +CRIT${Math.round((it.stats.crit||0)*100)}%
+        </div>
+      </div>
+      <button class="btn small ${gearTarget?"primary":"ghost"}" data-equip="${it.id}">
+        ${gearTarget?"EQUIP":"VIEW"}
+      </button>
+    `;
+    UI.invList.appendChild(div);
+  }
+
+  UI.invList.querySelectorAll("button[data-equip]").forEach(b=>{
+    b.onclick=()=>{
+      if(!gearTarget) return; // view-only if not equipping
+      const itemId=b.getAttribute("data-equip");
+      const it=save.clan.inventory.find(x=>x.id===itemId);
+      if(!it) return;
+      const n=save.clan.roster.find(x=>x.id===gearTarget.ninjaId);
+      if(!n) return;
+
+      // equip
+      if(it.slot!==gearTarget.slot) return;
+      n.gear[it.slot]=it.id;
+      // exit equip mode
+      gearTarget=null;
+      saveNow(); renderTeam();
+    };
+  });
+
+  if(gearTarget){
+    // add cancel row on top
+    const cancel=document.createElement("div");
+    cancel.className="item";
+    cancel.innerHTML=`
+      <div><b>Equipping ${gearTarget.slot.toUpperCase()}</b> — tap an item below</div>
+      <button class="btn small ghost" id="cancelEquip">Cancel</button>
+    `;
+    UI.invList.prepend(cancel);
+    document.getElementById("cancelEquip").onclick=()=>{ gearTarget=null; renderTeam(); };
+  } else if(save.clan.inventory.length<1){
+    const empty=document.createElement("div");
+    empty.className="item";
+    empty.innerHTML=`<div class="hint">No items yet — win matches to earn loot.</div>`;
+    UI.invList.appendChild(empty);
+  }
+}
+
+function renderDojo(){
+  UI.dojoLadder.textContent = `Tier ${save.clan.ladder.tier} • W${save.clan.ladder.wins} L${save.clan.ladder.losses}`;
+  UI.modeQueue.classList.toggle("ghost", save.clan.mode!=="QUEUE");
+  UI.modeBrawl.classList.toggle("ghost", save.clan.mode!=="BRAWL");
+
+  UI.rewardsList.innerHTML="";
+  const rewards = save.clan.lastRewards ?? [];
+  if(!rewards.length){
+    const d=document.createElement("div");
+    d.className="item";
+    d.innerHTML=`<div class="hint">No recent rewards. Queue a match!</div>`;
+    UI.rewardsList.appendChild(d);
+  }else{
+    for(const r of rewards){
+      const d=document.createElement("div");
+      d.className="item";
+      if(r.type==="karma"){
+        d.innerHTML=`<div><b>Karma</b> +${r.amount}</div><span class="pill">${r.reason}</span>`;
+      }else if(r.type==="item"){
+        d.innerHTML=`<div><b>Loot</b> ${r.name} <span class="pill rar ${r.rarity}">${r.rarity}</span></div><span class="pill">${r.slot.toUpperCase()}</span>`;
+      }else if(r.type==="tier"){
+        d.innerHTML=`<div><b>Ladder</b> Tier Up! → Tier ${r.tier}</div><span class="pill">Win streak</span>`;
+      }
+      UI.rewardsList.appendChild(d);
+    }
+  }
+}
+
+/* =========================
+   BABYLON 3D SCENE
+========================= */
+const canvas=document.getElementById("c");
+const engine=new BABYLON.Engine(canvas,true);
+const scene=new BABYLON.Scene(engine);
+scene.clearColor = new BABYLON.Color4(0.06,0.06,0.08,1);
+
+const camera=new BABYLON.ArcRotateCamera("cam", Math.PI*1.14, Math.PI*0.33, 22, new BABYLON.Vector3(0,1,0), scene);
+camera.attachControl(canvas,true);
+camera.lowerRadiusLimit=12;
+camera.upperRadiusLimit=34;
+
+const hemi=new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
+hemi.intensity=0.95;
+const dir=new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(-0.45,-1,0.25), scene);
+dir.position=new BABYLON.Vector3(12,18,-10);
+dir.intensity=0.75;
+
+const ground=BABYLON.MeshBuilder.CreateGround("ground",{width:26,height:14},scene);
+const gmat=new BABYLON.StandardMaterial("gmat",scene);
+gmat.diffuseColor=new BABYLON.Color3(0.10,0.10,0.13);
+gmat.specularColor=new BABYLON.Color3(0.1,0.1,0.1);
+ground.material=gmat;
+
+const centerLine=BABYLON.MeshBuilder.CreateBox("line",{width:0.12,height:0.01,depth:14},scene);
+centerLine.position.y=0.005;
+const lmat=new BABYLON.StandardMaterial("lmat",scene);
+lmat.emissiveColor=new BABYLON.Color3(0.25,0.15,0.05);
+centerLine.material=lmat;
+
+function makePost(x,color){
+  const pole=BABYLON.MeshBuilder.CreateCylinder("pole",{height:2.2,diameter:0.08},scene);
+  pole.position=new BABYLON.Vector3(x,1.1,0);
+  const pm=new BABYLON.StandardMaterial("pm"+x,scene);
+  pm.diffuseColor=color;
+  pole.material=pm;
+}
+makePost(-8,new BABYLON.Color3(0.2,0.6,1.0));
+makePost( 8,new BABYLON.Color3(1.0,0.35,0.2));
+
+/* Sparks VFX */
+function hitSparks(pos){
+  const ps=new BABYLON.ParticleSystem("sparks",60,scene);
+  ps.particleTexture=new BABYLON.Texture("https://assets.babylonjs.com/textures/flare.png",scene);
+  ps.emitter=pos.clone();
+  ps.minEmitBox=new BABYLON.Vector3(-0.05,0.0,-0.05);
+  ps.maxEmitBox=new BABYLON.Vector3( 0.05,0.05, 0.05);
+  ps.minSize=0.06; ps.maxSize=0.14;
+  ps.minLifeTime=0.12; ps.maxLifeTime=0.30;
+  ps.emitRate=900;
+  ps.blendMode=BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+  ps.gravity=new BABYLON.Vector3(0,-6,0);
+  ps.direction1=new BABYLON.Vector3(-2,2,-2);
+  ps.direction2=new BABYLON.Vector3( 2,4, 2);
+  ps.minEmitPower=1.2; ps.maxEmitPower=3.0;
+  ps.updateSpeed=0.02;
+  ps.start();
+  setTimeout(()=>{ps.stop();ps.dispose();},220);
+}
+
+/* Screen shake */
+let shakeTime=0;
+let shakeMag=0;
+const baseCamTarget=camera.target.clone();
+scene.onBeforeRenderObservable.add(()=>{
+  // joystick camera pan applied elsewhere; shake modifies radius/target slightly
+  const dt=engine.getDeltaTime()/1000;
+  if(shakeTime>0){
+    shakeTime -= dt;
+    const t=Math.max(0,shakeTime);
+    const s = shakeMag * (t / Math.max(0.0001,shakeMagTimeStart));
+    camera.alpha += (Math.random()-0.5) * 0.010 * s;
+    camera.beta  += (Math.random()-0.5) * 0.006 * s;
+  }
+});
+let shakeMagTimeStart=0;
+function shake(mag, seconds){
+  shakeMag=mag;
+  shakeTime=seconds;
+  shakeMagTimeStart=seconds;
+}
+
+/* Procedural ninja mesh */
+function createNinjaMesh(id, color3){
+  const root=new BABYLON.TransformNode("ninjaRoot_"+id,scene);
+
+  const body=BABYLON.MeshBuilder.CreateCapsule("body_"+id,{height:1.4,radius:0.33},scene);
+  body.parent=root;
+
+  const head=BABYLON.MeshBuilder.CreateSphere("head_"+id,{diameter:0.52},scene);
+  head.parent=root; head.position.y=0.94;
+
+  const belt=BABYLON.MeshBuilder.CreateBox("belt_"+id,{width:0.78,height:0.12,depth:0.42},scene);
+  belt.parent=root; belt.position.y=0.28;
+
+  const mask=BABYLON.MeshBuilder.CreateBox("mask_"+id,{width:0.42,height:0.12,depth:0.02},scene);
+  mask.parent=root; mask.position.y=0.98; mask.position.z=0.26;
+
+  const mat=new BABYLON.StandardMaterial("nmat_"+id,scene);
+  mat.diffuseColor=color3;
+  mat.specularColor=new BABYLON.Color3(0.12,0.12,0.12);
+  body.material=mat; head.material=mat;
+
+  const bmat=new BABYLON.StandardMaterial("bmat_"+id,scene);
+  bmat.diffuseColor=new BABYLON.Color3(0.05,0.05,0.05);
+  belt.material=bmat;
+
+  const mmat=new BABYLON.StandardMaterial("mmat_"+id,scene);
+  mmat.emissiveColor=new BABYLON.Color3(0.02,0.02,0.02);
+  mask.material=mmat;
+
+  return root;
+}
+
+/* =========================
+   BATTLE SYSTEM
+========================= */
+const A_LINE_X=-8, B_LINE_X=8, MEET_X=0;
+const LANES=[-2.7,-1.2,0.3,1.8];
+
+let battleRunning=false;
+let autoMode=true;
+let timeScale=1;
+let pendingManual=null; // "ATTACK" | "SKILL"
+
+let teamA=[], teamB=[];
+let mode="QUEUE"; // derived from save
+let aiName="";
+
+function battleStatsFromNinja(n){
+  const invMap=invById();
+  const s=applyGear(n.base, n.gear, invMap);
+  return {
+    id:n.id, name:n.name, level:n.level,
+    maxHP:s.maxHP, hp:s.maxHP,
+    atk:s.atk, def:s.def, spd:s.spd, crit:s.crit,
+    alive:true,
+    status:[], // {type, turns, value}
+    cdSkill:0,
+    skill:n.loadout?.skill || "Power Strike",
+    mesh:null,
+    homeX:0,
+    laneZ:0,
+    side:"A",
+  };
+}
+
+function makeAIClan(){
+  const tier=save.clan.ladder.tier;
+  const beltIdx=Math.max(0,BELTS.indexOf(save.clan.belt));
+  const diff = tier + beltIdx;
+  const scale=1 + diff*0.07;
+
+  aiName=pick(["Rogue Clan","Mist Clan","Iron Clan","Crimson Clan","Silent Clan","Obsidian Clan"]);
+  const clan=[];
+  for(let i=0;i<4;i++){
+    const base=makeNinja();
+    base.name = `${pick(["Shade","Fang","Lotus","Viper","Drift","Ash"])} ${pick(["Dojo","Kage","Rin","Mori","Zen"])}`;
+    base.base.maxHP=Math.round(base.base.maxHP*scale);
+    base.base.atk=Math.round(base.base.atk*scale);
+    base.base.def=Math.round(base.base.def*scale);
+    // random AI skill
+    base.loadout.skill = pick(["Power Strike","Shuriken","Meditate"]);
+    // AI "gear" baked in as stats boost by tier
+    // (keep it simple in single file)
+    base.base.maxHP += Math.floor(tier*3);
+    base.base.atk   += Math.floor(tier*1.5);
+    clan.push(battleStatsFromNinja(base));
+  }
+  return clan;
+}
+
+function alive(list){ return list.filter(n=>n.alive); }
+function front(list){ return alive(list)[0]||null; }
+
+function setBattleHUD(){
+  UI.sumA.textContent = `${save.clan.belt} • ${alive(teamA).length}/4`;
+  UI.sumB.textContent = `${aiName} • ${alive(teamB).length}/4`;
+  UI.sumMode.textContent = mode;
+}
+
+function log(msg){ UI.logText.textContent = msg; }
+
+function computeDamage(att, def, mult=1){
+  const crit = Math.random() < att.crit;
+  const base = (att.atk*mult) * (crit?1.75:1.0);
+  const raw = Math.floor(base - def.def);
+  const dmg = clamp(raw, 2, 999);
+  return {dmg, crit};
+}
+
+function addStatus(target, spec){
+  if(!spec) return null;
+  if(Math.random() > (spec.chance??1)) return null;
+  const s={type:spec.type, turns:spec.turns, value:spec.value||0};
+  target.status.push(s);
+  return s;
+}
+function hasStatus(n,type){ return n.status.some(s=>s.type===type && s.turns>0); }
+
+function tickStatus(n){
+  let dot=0;
+  const next=[];
+  for(const s of n.status){
+    if(s.type==="bleed"){ dot += s.value; }
+    s.turns -= 1;
+    if(s.turns>0) next.push(s);
+  }
+  n.status = next;
+  if(dot>0){
+    n.hp = Math.max(0, n.hp - dot);
+    if(n.hp===0){ n.alive=false; }
+  }
+  return dot;
+}
+
+async function moveToX(mesh, targetX, speed){
+  return new Promise(resolve=>{
+    const obs = scene.onBeforeRenderObservable.add(()=>{
+      const dt = engine.getDeltaTime()/1000 * timeScale;
+      const dir = Math.sign(targetX - mesh.position.x);
+      const step = speed * dt * dir;
+      const next = mesh.position.x + step;
+      if((dir>0 && next>=targetX) || (dir<0 && next<=targetX) || dir===0){
+        mesh.position.x = targetX;
+        scene.onBeforeRenderObservable.remove(obs);
+        resolve();
+      } else {
+        mesh.position.x = next;
+      }
+    });
+  });
+}
+
+async function runAnimSlash(attacker){
+  // quick forward lunge + arm-like twist (root rotation)
+  const m=attacker.mesh;
+  const startZ=m.position.z;
+  const startRot=m.rotation.y;
+  m.position.z = startZ + (attacker.side==="A"?0.18:-0.18);
+  m.rotation.y = startRot + (attacker.side==="A"?0.25:-0.25);
+  await sleep(70/timeScale);
+  m.rotation.y = startRot;
+  m.position.z = startZ;
+}
+
+async function wobble(mesh){
+  const start=mesh.rotation.z;
+  for(let i=0;i<5;i++){
+    mesh.rotation.z = start + (i%2===0?0.25:-0.25);
+    await sleep(55/timeScale);
+  }
+  mesh.rotation.z = start;
+}
+
+async function fall(mesh){
+  mesh.rotation.z = 1.25;
+  mesh.position.y = 0.35;
+  await sleep(140/timeScale);
+  mesh.setEnabled(false);
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function clearMeshes(){
+  for(const n of [...teamA,...teamB]){
+    if(n.mesh){ n.mesh.dispose(); n.mesh=null; }
+  }
+}
+
+function placeTeams(){
+  clearMeshes();
+  // A
+  teamA.forEach((n,i)=>{
+    n.mesh = createNinjaMesh("A_"+i, new BABYLON.Color3(0.2,0.6,1.0));
+    n.homeX = A_LINE_X;
+    n.laneZ = LANES[i%LANES.length];
+    n.side="A";
+    n.mesh.position = new BABYLON.Vector3(n.homeX, 0.7, n.laneZ);
+    n.mesh.rotation.y = 0;
+    n.mesh.setEnabled(true);
+  });
+  // B
+  teamB.forEach((n,i)=>{
+    n.mesh = createNinjaMesh("B_"+i, new BABYLON.Color3(1.0,0.35,0.2));
+    n.homeX = B_LINE_X;
+    n.laneZ = LANES[i%LANES.length];
+    n.side="B";
+    n.mesh.position = new BABYLON.Vector3(n.homeX, 0.7, n.laneZ);
+    n.mesh.rotation.y = Math.PI;
+    n.mesh.setEnabled(true);
+  });
+}
+
+function skillSpec(name){
+  // Single “SKILL” button uses the attacker’s chosen skill:
+  // Power Strike: big hit + chance stun
+  // Shuriken: ranged-ish + bleed
+  // Meditate: heal
+  if(name==="Power Strike") return {kind:"melee", mult:1.75, status:{type:"stun", turns:1, chance:0.30}, cd:3};
+  if(name==="Shuriken") return {kind:"ranged", mult:1.15, status:{type:"bleed", turns:3, value:4, chance:0.55}, cd:2};
+  if(name==="Meditate") return {kind:"support", heal:18, cd:3};
+  return {kind:"melee", mult:1.0, cd:0};
+}
+
+function chooseAIAction(ai, enemy){
+  // If stunned can't act; handled elsewhere
+  if(ai.cdSkill===0){
+    // heal if low and has meditate
+    if(ai.skill==="Meditate" && ai.hp < ai.maxHP*0.5) return "SKILL";
+    // use skill often in brawl; moderate in queue
+    if(mode==="BRAWL" && Math.random()<0.55) return "SKILL";
+    if(mode==="QUEUE" && Math.random()<0.35) return "SKILL";
+  }
+  return "ATTACK";
+}
+
+async function doAction(attacker, defender, action){
+  if(!attacker.alive) return;
+
+  // status tick before action (DOT)
+  const dot=tickStatus(attacker);
+  if(dot>0) log(`${attacker.name} bleeds -${dot}`);
+  if(!attacker.alive){
+    shake(1.1, 0.18);
+    await fall(attacker.mesh);
+    return;
+  }
+
+  if(hasStatus(attacker,"stun")){
+    log(`${attacker.name} is STUNNED!`);
+    // consume 1 stun turn by ticking statuses already did; stun decrements by tickStatus (not stun), so decrement here:
+    attacker.status = attacker.status.map(s => (s.type==="stun"?({...s, turns:Math.max(0,s.turns-1)}):s)).filter(s=>s.turns>0);
+    await sleep(140/timeScale);
+    return;
+  }
+
+  // decide action if cooldown prevents skill
+  if(action==="SKILL" && attacker.cdSkill>0) action="ATTACK";
+
+  if(action==="SKILL"){
+    const spec=skillSpec(attacker.skill);
+    attacker.cdSkill = spec.cd;
+
+    if(spec.kind==="support"){
+      const before=attacker.hp;
+      attacker.hp = Math.min(attacker.maxHP, attacker.hp + spec.heal);
+      log(`${attacker.name} meditates +${attacker.hp-before}`);
+      hitSparks(attacker.mesh.position.add(new BABYLON.Vector3(0,0.9,0)));
+      shake(0.7, 0.12);
+      await sleep(160/timeScale);
+      return;
+    }
+
+    // ranged shuriken: don't need run-in
+    if(spec.kind==="ranged"){
+      await runAnimSlash(attacker);
+      const {dmg,crit}=computeDamage(attacker,defender,spec.mult);
+      defender.hp = Math.max(0, defender.hp - dmg);
+      if(defender.hp===0) defender.alive=false;
+      const st=addStatus(defender, spec.status);
+      hitSparks(defender.mesh.position.add(new BABYLON.Vector3(0,0.9,0)));
+      shake(1.1, 0.16);
+      log(`${attacker.name} throws SHURIKEN -${dmg}${crit?" CRIT":""}${st?` (${st.type})`:""}`);
+      await sleep(140/timeScale);
+      if(!defender.alive){ await wobble(defender.mesh); await fall(defender.mesh); }
+      return;
+    }
+
+    // melee power strike
+    await runAnimSlash(attacker);
+    const {dmg,crit}=computeDamage(attacker,defender,spec.mult);
+    defender.hp = Math.max(0, defender.hp - dmg);
+    if(defender.hp===0) defender.alive=false;
+    const st=addStatus(defender, spec.status);
+    hitSparks(defender.mesh.position.add(new BABYLON.Vector3(0,0.9,0)));
+    shake(1.5, 0.18);
+    log(`${attacker.name} POWER STRIKE -${dmg}${crit?" CRIT":""}${st?` (${st.type})`:""}`);
+    await sleep(140/timeScale);
+    if(!defender.alive){ await wobble(defender.mesh); await fall(defender.mesh); }
+    return;
+  }
+
+  // basic ATTACK
+  await runAnimSlash(attacker);
+  const {dmg,crit}=computeDamage(attacker,defender,1.0);
+  defender.hp = Math.max(0, defender.hp - dmg);
+  if(defender.hp===0) defender.alive=false;
+  hitSparks(defender.mesh.position.add(new BABYLON.Vector3(0,0.9,0)));
+  shake(1.0, 0.14);
+  log(`${attacker.name} slashes -${dmg}${crit?" CRIT":""}`);
+  await sleep(130/timeScale);
+  if(!defender.alive){ await wobble(defender.mesh); await fall(defender.mesh); }
+}
+
+async function queueTurn(){
+  // cooldown tick
+  for(const n of [...teamA,...teamB]) if(n.cdSkill>0) n.cdSkill--;
+
+  const a=front(teamA), b=front(teamB);
+  if(!a || !b) return;
+
+  // run in
+  await Promise.all([
+    moveToX(a.mesh, MEET_X-1.0, a.spd*3.4),
+    moveToX(b.mesh, MEET_X+1.0, b.spd*3.4),
+  ]);
+
+  // actions
+  const aAct = (!autoMode && pendingManual) ? pendingManual : (a.cdSkill===0 && Math.random()<0.30 ? "SKILL":"ATTACK");
+  const bAct = chooseAIAction(b, a);
+
+  await doAction(a,b,aAct);
+  setBattleHUD();
+  if(!b.alive){
+    // karma per KO
+    rewardKO();
+    // send survivor back
+    await moveToX(a.mesh, A_LINE_X, a.spd*3.8);
+    pendingManual=null;
+    return;
+  }
+
+  await doAction(b,a,bAct);
+  setBattleHUD();
+  if(!a.alive){
+    await moveToX(b.mesh, B_LINE_X, b.spd*3.8);
+    pendingManual=null;
+    return;
+  }
+
+  await Promise.all([
+    moveToX(a.mesh, A_LINE_X, a.spd*3.8),
+    moveToX(b.mesh, B_LINE_X, b.spd*3.8),
+  ]);
+  pendingManual=null;
+}
+
+async function brawlTick(){
+  // cooldown tick
+  for(const n of [...teamA,...teamB]) if(n.cdSkill>0) n.cdSkill--;
+
+  // Everyone acts in order A then B
+  const sides=[
+    {tag:"A", list:alive(teamA), enemy:()=>alive(teamB)},
+    {tag:"B", list:alive(teamB), enemy:()=>alive(teamA)},
+  ];
+
+  for(const side of sides){
+    for(const n of side.list){
+      if(!n.alive) continue;
+      const enemies=side.enemy();
+      if(!enemies.length) return;
+
+      // target: nearest lane enemy (same index-ish) else random
+      let target=enemies[0];
+      const sameLane = enemies.find(e=>Math.abs(e.laneZ - n.laneZ) < 0.6);
+      if(sameLane) target=sameLane;
+      else target=enemies[Math.floor(Math.random()*enemies.length)];
+
+      const act = (side.tag==="A" && !autoMode && pendingManual) ? pendingManual
+        : (n.cdSkill===0 && Math.random()<0.35 ? "SKILL":"ATTACK");
+
+      // tiny lunge forward instead of full run-in
+      const startX=n.mesh.position.x;
+      const toward = startX + (side.tag==="A"?1.0:-1.0);
+      await moveToX(n.mesh, toward, n.spd*5.6);
+      await doAction(n, target, act);
+      setBattleHUD();
+
+      // return
+      if(n.alive) await moveToX(n.mesh, startX, n.spd*5.6);
+
+      if(!target.alive && side.tag==="A") rewardKO();
+      if(!alive(teamA).length || !alive(teamB).length) return;
+    }
+  }
+
+  pendingManual=null;
+  await sleep(120/timeScale);
+}
+
+function rewardKO(){
+  // +10 karma per KO (small)
+  save.clan.karma += 10;
+  save.clan.belt = beltFromKarma(save.clan.karma);
+  save.clan.lastRewards = [{type:"karma", amount:10, reason:"KO"}].concat(save.clan.lastRewards).slice(0,6);
+  saveNow();
+}
+
+function rewardWin(){
+  const tier=save.clan.ladder.tier;
+  const baseWin=30;
+  save.clan.karma += baseWin;
+  save.clan.belt = beltFromKarma(save.clan.karma);
+
+  save.clan.ladder.wins += 1;
+  // tier up every 3 wins
+  let tierUp=false;
+  if(save.clan.ladder.wins % 3 === 0){
+    save.clan.ladder.tier += 1;
+    tierUp=true;
+  }
+
+  // loot roll
+  const lootChance = 0.85;
+  const rewards=[];
+  rewards.push({type:"karma", amount:baseWin, reason:"Win"});
+  if(tierUp) rewards.push({type:"tier", tier:save.clan.ladder.tier});
+  if(Math.random() < lootChance){
+    const item=rollItem(save.clan.ladder.tier);
+    save.clan.inventory.push(item);
+    rewards.push({type:"item", name:item.name, rarity:item.rarity, slot:item.slot});
+  }
+
+  save.clan.lastRewards = rewards.concat(save.clan.lastRewards).slice(0,10);
+  saveNow();
+}
+
+function rewardLoss(){
+  save.clan.ladder.losses += 1;
+  save.clan.lastRewards = [{type:"karma", amount:0, reason:"Defeat"}].concat(save.clan.lastRewards).slice(0,6);
+  saveNow();
+}
+
+async function battleLoop(){
+  if(battleRunning) return;
+  battleRunning=true;
+  UI.startBtn.disabled=true;
+  log("Fight!");
+  setBattleHUD();
+
+  while(alive(teamA).length && alive(teamB).length){
+    if(mode==="QUEUE") await queueTurn();
+    else await brawlTick();
+  }
+
+  const win = alive(teamA).length>0;
+  if(win){
+    rewardWin();
+    log(`WIN! +30 karma`);
+    shake(2.0, 0.25);
+  } else {
+    rewardLoss();
+    log("DEFEAT… tweak your lineup/gear");
+  }
+  setBattleHUD();
+
+  await sleep(650);
+  battleRunning=false;
+  UI.startBtn.disabled=false;
+
+  // back to home
+  showScreen("home");
+  UI.hud.classList.remove("active");
+  renderAll();
+  clearMeshes();
+}
+
+/* =========================
+   MATCH SETUP
+========================= */
+function startMatch(){
+  // validate lineup fallback
+  const ids = save.clan.lineup.slice(0,4);
+  let lineup = ids.map(id=>save.clan.roster.find(n=>n.id===id)).filter(Boolean);
+  if(!lineup.length) lineup = save.clan.roster.slice(0,4);
+
+  teamA = lineup.map(battleStatsFromNinja);
+  teamB = makeAIClan();
+
+  mode = save.clan.mode;
+  placeTeams();
+  pendingManual=null;
+  log("Ready");
+  setBattleHUD();
+}
+
+/* =========================
+   TOUCH UI CONTROLS
+========================= */
+UI.toTeam.onclick=()=>{ showScreen("team"); renderAll(); };
+UI.toDojo.onclick=()=>{ showScreen("dojo"); renderAll(); };
+UI.toBattle.onclick=()=>{ showScreen("battle"); UI.hud.classList.add("active"); startMatch(); };
+
+UI.teamHome.onclick=()=>{ gearTarget=null; showScreen("home"); renderAll(); };
+UI.dojoHome.onclick=()=>{ showScreen("home"); renderAll(); };
+UI.battleHome.onclick=()=>{ showScreen("home"); UI.hud.classList.remove("active"); clearMeshes(); renderAll(); };
+
+UI.recruitBtn.onclick=()=>{
+  save.clan.roster.push(makeNinja());
+  saveNow(); renderAll();
+};
+
+UI.queueBtn.onclick=()=>{
+  showScreen("battle"); UI.hud.classList.add("active"); startMatch();
+};
+
+UI.wipeBtn.onclick=()=>{
+  localStorage.removeItem(SAVE_KEY);
+  save = defaultSave();
+  saveNow();
+  gearTarget=null;
+  clearMeshes();
+  showScreen("home");
+  renderAll();
+};
+
+UI.modeQueue.onclick=()=>{ save.clan.mode="QUEUE"; saveNow(); renderDojo(); };
+UI.modeBrawl.onclick=()=>{ save.clan.mode="BRAWL"; saveNow(); renderDojo(); };
+
+UI.startBtn.onclick=()=>battleLoop();
+UI.atkBtn.onclick=()=>{ pendingManual="ATTACK"; };
+UI.skillBtn.onclick=()=>{ pendingManual="SKILL"; };
+UI.autoBtn.onclick=()=>{
+  autoMode=!autoMode;
+  UI.autoBtn.textContent = autoMode ? "AUTO" : "MAN";
+};
+UI.spdBtn.onclick=()=>{
+  timeScale = (timeScale===1)?2:(timeScale===2?3:1);
+  UI.spdBtn.textContent = "x"+timeScale;
+};
+
+/* iOS gesture prevention */
+document.addEventListener("gesturestart",(e)=>e.preventDefault());
+document.addEventListener("dblclick",(e)=>e.preventDefault());
+
+/* Joystick camera pan */
+let joyActive=false, joyId=null;
+let joyCenter={x:0,y:0};
+let joyVec={x:0,y:0};
+
+function setJoy(dx,dy){
+  const r=55;
+  const mag=Math.hypot(dx,dy);
+  const m=mag>r ? (r/mag) : 1;
+  const ox=dx*m, oy=dy*m;
+  UI.joyStick.style.transform=`translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
+  joyVec.x = ox/r; joyVec.y = oy/r;
+}
+function resetJoy(){
+  UI.joyStick.style.transform="translate(-50%,-50%)";
+  joyVec.x=0; joyVec.y=0;
+}
+UI.joyZone.addEventListener("pointerdown",(e)=>{
+  joyActive=true; joyId=e.pointerId;
+  UI.joyZone.setPointerCapture(joyId);
+  const rect=UI.joyZone.getBoundingClientRect();
+  joyCenter.x = rect.left + rect.width/2;
+  joyCenter.y = rect.top + rect.height/2;
+  setJoy(e.clientX-joyCenter.x, e.clientY-joyCenter.y);
+});
+UI.joyZone.addEventListener("pointermove",(e)=>{
+  if(!joyActive || e.pointerId!==joyId) return;
+  setJoy(e.clientX-joyCenter.x, e.clientY-joyCenter.y);
+});
+UI.joyZone.addEventListener("pointerup",(e)=>{
+  if(e.pointerId!==joyId) return;
+  joyActive=false; joyId=null; resetJoy();
+});
+UI.joyZone.addEventListener("pointercancel",()=>{ joyActive=false; joyId=null; resetJoy(); });
+
+scene.onBeforeRenderObservable.add(()=>{
+  // camera pan via joystick
+  const dt=engine.getDeltaTime()/1000;
+  if(Math.abs(joyVec.x)>0.02 || Math.abs(joyVec.y)>0.02){
+    camera.target.x += joyVec.x * 4.2 * dt;
+    camera.target.z += joyVec.y * 4.2 * dt;
+    camera.target.x = clamp(camera.target.x, -3.2, 3.2);
+    camera.target.z = clamp(camera.target.z, -4.2, 4.2);
+  }
+});
+
+/* =========================
+   RENDER LOOP / INIT
+========================= */
+function renderAll(){
+  renderHome();
+  renderTeam();
+  renderDojo();
+}
+
+renderAll();
+showScreen("home");
+
+engine.runRenderLoop(()=>scene.render());
+window.addEventListener("resize",()=>engine.resize());
+</script>
+</body>
+</html>
