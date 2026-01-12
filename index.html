@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Oz Ninja Town </title>
+<title>Oz Ninja Town</title>
 <style>
   html,body{
     margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
@@ -51,22 +51,15 @@
     background:#eee;color:#111; box-shadow:0 6px 14px rgba(0,0,0,.18);
     font-size:12px;
   }
-  .btn.primary{background:var(--accent)}
   .btn.ghost{background:rgba(255,255,255,.25); border:1px solid rgba(0,0,0,.14);}
   .btn.small{padding:7px 9px;font-size:11px;border-radius:11px}
   .btn:disabled{opacity:.55}
 
   /* ===== Town screen ===== */
-  #town{
-    position:absolute; inset:0;
-    padding-top:calc(56px + var(--pad-top));
-  }
+  #town{ position:absolute; inset:0; padding-top:calc(56px + var(--pad-top)); }
 
-  /* Lower the entire island more */
-  #townLayer{
-    position:absolute; inset:0;
-    transform: translateY(95px);  /* lowered from 60px -> 95px */
-  }
+  /* Island height (KEEP — you said it looks good) */
+  #townLayer{ position:absolute; inset:0; transform: translateY(95px); }
 
   #townBg{
     position:absolute; inset:0;
@@ -87,9 +80,7 @@
   }
 
   .label{
-    position:absolute;
-    left:50%;
-    bottom:10%;
+    position:absolute; left:50%; bottom:10%;
     transform:translateX(-50%);
     padding:8px 12px;
     border-radius:999px;
@@ -103,25 +94,23 @@
     white-space:nowrap;
   }
 
-  /* ===== Hit zone positions (UPDATED per your request) ===== */
-
-  /* Top-left yellow building = Hospital (moved here) */
-  #hsHospital { left:  6%; top: 36%; width: 30%; height: 22%; }
-
-  /* Top-right red roof building = Dojo (moved here) */
-  #hsDojo     { left: 30%; top: 26%; width: 38%; height: 24%; }
-
-  /* Blue roof right building = Weapon Shop */
-  #hsWeapon   { left: 64%; top: 32%; width: 30%; height: 22%; }
-
-  /* Left-mid building = Recruit */
-  #hsRecruit  { left:  6%; top: 46%; width: 30%; height: 22%; }
-
-  /* Relic shop stays accessible on grass (until we add a relic building) */
-  #hsRelic    { left: 58%; top: 46%; width: 24%; height: 16%; }
-
-  /* Circle pit bottom-right = Battle */
-  #hsFight    { left: 48%; top: 54%; width: 48%; height: 30%; }
+  /* =========================================================
+     HOTSPOTS TUNED TO YOUR LATEST SCREENSHOT (v6 image)
+     - Hospital: top-left big yellow building
+     - Dojo: top-right pagoda
+     - Daimyo: center red building
+     - Relic: small left-mid yellow building
+     - Weapon: right blue building
+     - Recruit: bottom-left green building
+     - Battle: circle pit
+  ========================================================= */
+  #hsHospital { left:  2%; top: 11%; width: 38%; height: 22%; }
+  #hsDojo     { left: 66%; top: 10%; width: 32%; height: 26%; }
+  #hsDaimyo   { left: 33%; top: 26%; width: 36%; height: 22%; }
+  #hsRelic    { left:  4%; top: 40%; width: 32%; height: 20%; }
+  #hsWeapon   { left: 62%; top: 36%; width: 34%; height: 22%; }
+  #hsRecruit  { left:  6%; top: 60%; width: 36%; height: 22%; }
+  #hsFight    { left: 49%; top: 54%; width: 47%; height: 22%; }
 
   /* ===== Modals ===== */
   .modal{
@@ -152,42 +141,15 @@
     font-size:12px;
   }
   .stat b{font-family:ui-monospace,Menlo,monospace;font-size:13px}
-  .list{
-    margin-top:10px;
-    max-height:320px; overflow:auto;
-    border-radius:14px;
-    border:1px solid rgba(0,0,0,.14);
-    background:rgba(255,255,255,.22);
-  }
-  .item{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    padding:10px 12px;border-bottom:1px solid rgba(0,0,0,.10);
-    font-size:12px;
-  }
-  .item:last-child{border-bottom:0}
-  .pill{
-    display:inline-block;
-    padding:4px 8px;border-radius:999px;
-    background:rgba(255,255,255,.55);
-    border:1px solid rgba(0,0,0,.10);
-    font-size:11px;font-weight:950;
-  }
-  .rar{font-weight:1000}
-  .rar.Common{color:#555}
-  .rar.Uncommon{color:#0d7a1c}
-  .rar.Rare{color:#1a63c8}
-  .rar.Epic{color:#7a2ac9}
-  .rar.Legendary{color:#b06b00}
 
   /* ===== Battle ===== */
   #battle{ position:absolute; inset:0; z-index:60; }
   #battleBg{
     position:absolute; inset:0;
-    background-image:url("battle.jpg"); /* pulls battle.jpg from repo */
+    background-image:url("battle.jpg"); /* MUST be battle.jpg in repo */
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
-    transform:scale(1.02);
   }
   #battleCanvas{position:absolute; inset:0; width:100%; height:100%}
   #battleTop{
@@ -225,7 +187,7 @@
 <body>
   <div id="topbar">
     <div class="barL">
-      <div class="chip">Build <b>v6-HOSP+DOJO</b></div>
+      <div class="chip">Build <b>v7-FIX-HOTSPOTS+BATTLE</b></div>
       <div class="chip">Active <b id="uiName">—</b></div>
       <div class="chip">HP <b id="uiHP">—</b></div>
       <div class="chip">☯ <b id="uiKarma">0</b></div>
@@ -244,35 +206,13 @@
     <div id="townLayer">
       <div id="townBg"></div>
 
-      <!-- Hospital -->
-      <button class="hotspot" id="hsHospital" aria-label="Hospital">
-        <div class="label">Hospital</div>
-      </button>
-
-      <!-- Dojo -->
-      <button class="hotspot" id="hsDojo" aria-label="Dojo">
-        <div class="label">Dojo</div>
-      </button>
-
-      <!-- Weapon Shop -->
-      <button class="hotspot" id="hsWeapon" aria-label="Weapon Shop">
-        <div class="label">Weapon Shop</div>
-      </button>
-
-      <!-- Recruit -->
-      <button class="hotspot" id="hsRecruit" aria-label="Recruit">
-        <div class="label">Recruit</div>
-      </button>
-
-      <!-- Relic -->
-      <button class="hotspot" id="hsRelic" aria-label="Relic Shop">
-        <div class="label">Relic Shop</div>
-      </button>
-
-      <!-- Battle -->
-      <button class="hotspot" id="hsFight" aria-label="Battle">
-        <div class="label">Battle</div>
-      </button>
+      <button class="hotspot" id="hsHospital" aria-label="Hospital"><div class="label">Hospital</div></button>
+      <button class="hotspot" id="hsDojo" aria-label="Dojo"><div class="label">Dojo</div></button>
+      <button class="hotspot" id="hsDaimyo" aria-label="Daimyo"><div class="label">Daimyo</div></button>
+      <button class="hotspot" id="hsRelic" aria-label="Relic Shop"><div class="label">Relic Shop</div></button>
+      <button class="hotspot" id="hsWeapon" aria-label="Weapon Shop"><div class="label">Weapon Shop</div></button>
+      <button class="hotspot" id="hsRecruit" aria-label="Recruit"><div class="label">Recruit</div></button>
+      <button class="hotspot" id="hsFight" aria-label="Battle"><div class="label">Battle</div></button>
     </div>
   </div>
 
@@ -312,9 +252,9 @@
       </div>
 
       <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="trainSTR">+ STR (1 TP)</button>
-        <button class="btn primary" id="trainAGI">+ AGI (1 TP)</button>
-        <button class="btn primary" id="trainEND">+ END (1 TP)</button>
+        <button class="btn" style="background:var(--accent)" id="trainSTR">+ STR (1 TP)</button>
+        <button class="btn" style="background:var(--accent)" id="trainAGI">+ AGI (1 TP)</button>
+        <button class="btn" style="background:var(--accent)" id="trainEND">+ END (1 TP)</button>
       </div>
 
       <div class="muted" style="margin-top:10px">
@@ -323,135 +263,98 @@
     </div>
   </div>
 
-  <!-- Recruit Modal -->
-  <div class="modal hidden" id="recruitModal">
+  <!-- Daimyo Modal -->
+  <div class="modal hidden" id="daiModal">
     <div class="card">
       <div class="row sp">
-        <h3 class="title">Recruit Ninjas</h3>
-        <button class="btn ghost small" id="closeRecruit">Close</button>
+        <h3 class="title">Daimyo</h3>
+        <button class="btn ghost small" id="closeDai">Close</button>
       </div>
-      <div class="muted" id="recruitLockText"></div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="recruitBtn">Recruit (🪙 <span id="recruitCost">120</span>)</button>
-        <button class="btn ghost" id="setActiveBtn">Set Selected Active</button>
+      <div class="muted">Belts are earned by XP. Win fights to rank up.</div>
+      <div class="statGrid">
+        <div class="stat">Belt<br><b id="dBelt">White</b></div>
+        <div class="stat">XP<br><b id="dXP">0</b></div>
+        <div class="stat">Next Belt XP<br><b id="dNext">50</b></div>
       </div>
-
-      <div class="list" id="rosterList"></div>
-      <div class="muted" style="margin-top:10px">Recruit unlocks at <b>Yellow belt</b>.</div>
-    </div>
-  </div>
-
-  <!-- Weapon Modal -->
-  <div class="modal hidden" id="weaponModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Weapon Shop</h3>
-        <button class="btn ghost small" id="closeWeapon">Close</button>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="buyWeaponBtn">Buy Selected</button>
-        <button class="btn primary" id="equipWeaponBtn">Equip Selected</button>
-      </div>
-
-      <div class="list" id="weaponList"></div>
-    </div>
-  </div>
-
-  <!-- Relic Modal -->
-  <div class="modal hidden" id="relicModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Relic Shop</h3>
-        <button class="btn ghost small" id="closeRelic">Close</button>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="buyRelicBtn">Buy Selected</button>
-        <button class="btn primary" id="equipRelicBtn">Equip Selected</button>
-      </div>
-
-      <div class="list" id="relicList"></div>
     </div>
   </div>
 
 <script>
-const SAVE_KEY="ninja_town_rpg_v6";
+/* ============ File checks (helps diagnose battle not loading) ============ */
+(function checkImages(){
+  const t = new Image();
+  t.onerror = ()=>console.warn("town.jpg missing / wrong name");
+  t.src = "town.jpg?v=" + Date.now();
 
-/* Helpers */
-const $=(id)=>document.getElementById(id);
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function rand(a,b){return a+Math.random()*(b-a);}
-function rint(a,b){return Math.floor(rand(a,b+1));}
-function pick(a){return a[Math.floor(Math.random()*a.length)];}
-function id(prefix="id"){return prefix+"_"+Math.random().toString(16).slice(2)+"_"+Date.now().toString(16);}
+  const b = new Image();
+  b.onerror = ()=>console.warn("battle.jpg missing / wrong name");
+  b.src = "battle.jpg?v=" + Date.now();
+})();
+
+/* =========================
+   Save + helpers
+========================= */
+const SAVE_KEY="ninja_town_rpg_v7";
+const $ = (id)=>document.getElementById(id);
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function rand(a,b){ return a + Math.random()*(b-a); }
+function rint(a,b){ return Math.floor(rand(a,b+1)); }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function id(prefix="id"){ return prefix+"_"+Math.random().toString(16).slice(2)+"_"+Date.now().toString(16); }
 
 const BELTS=["White","Yellow","Orange","Green","Blue","Brown","Black"];
 const BELT_XP=[0,50,150,350,700,1200,2000];
-function beltFromXP(xp){let idx=0;for(let i=0;i<BELT_XP.length;i++) if(xp>=BELT_XP[i]) idx=i; return BELTS[Math.min(idx,BELTS.length-1)];}
-function beltIndex(b){return Math.max(0,BELTS.indexOf(b));}
+function beltFromXP(xp){ let idx=0; for(let i=0;i<BELT_XP.length;i++) if(xp>=BELT_XP[i]) idx=i; return BELTS[Math.min(idx,BELTS.length-1)]; }
+function nextBeltXP(xp){ for(let i=1;i<BELT_XP.length;i++) if(xp < BELT_XP[i]) return BELT_XP[i]; return BELT_XP[BELT_XP.length-1]; }
+function beltIndex(b){ return Math.max(0, BELTS.indexOf(b)); }
 
-const RARITIES=["Common","Uncommon","Rare","Epic","Legendary"];
-const RARITY_MULT={Common:1.0,Uncommon:1.12,Rare:1.28,Epic:1.45,Legendary:1.65};
-function rollRarity(tier){
-  const r=Math.random(); const boost=Math.min(0.18,tier*0.015);
-  if(r<0.03+boost*0.25) return "Legendary";
-  if(r<0.08+boost*0.40) return "Epic";
-  if(r<0.20+boost*0.60) return "Rare";
-  if(r<0.50+boost*0.75) return "Uncommon";
-  return "Common";
-}
-function makeWeapon(rarity){
-  const mult=RARITY_MULT[rarity]||1.0;
-  const name=pick(["Katana","Tanto","Naginata","War Fan","Iron Staff","Moon Blade","Storm Edge"]);
-  const bonus={str:Math.max(0,Math.round(1*mult+rand(0,1.2))),
-               agi:Math.max(0,Math.round(0.8*mult+rand(0,1.0))),
-               end:Math.max(0,Math.round(0.3*mult+rand(0,0.8)))};
-  const cost=Math.round((60+25*RARITIES.indexOf(rarity))*mult);
-  return {id:id("w"),rarity,name,bonus,cost};
-}
-function makeRelic(rarity){
-  const mult=RARITY_MULT[rarity]||1.0;
-  const name=pick(["Karma Bead","Smoke Ring","Focus Charm","Phoenix Feather","Shadow Seal","Lotus Medallion"]);
-  const bonus={str:Math.max(0,Math.round(0.4*mult+rand(0,0.8))),
-               agi:Math.max(0,Math.round(1.0*mult+rand(0,1.1))),
-               end:Math.max(0,Math.round(1.2*mult+rand(0,1.2)))};
-  const cost=Math.round((35+20*RARITIES.indexOf(rarity))*mult);
-  return {id:id("r"),rarity,name,bonus,cost};
-}
 function makeNinja(name=null){
   const first=["Ryu","Hana","Jin","Kira","Sora","Mako","Taro","Yumi","Akio","Ren","Aya","Kai","Noa","Rin"];
   const last=["Shadow","Steel","Blaze","Mist","Fang","Lotus","Night","Storm","Viper","Drift"];
-  const nm=name||`${pick(first)} ${pick(last)}`;
-  return {id:id("n"),name:nm,xp:0,level:1,tp:0,
-    base:{str:1,agi:1,end:1},
-    equip:{weaponId:null,relicId:null},
-    hp:70,maxHP:70
-  };
-}
-
-/* ===== DEFAULT SAVE (Starting ninja gets 10 TP) ===== */
-function defaultSave(){
-  const starter=makeNinja("Andy Holloway");
-  starter.tp = 10; /* <-- STARTING TP */
+  const nm = name || `${pick(first)} ${pick(last)}`;
   return {
-    currency:{karma:0,gold:120},
-    ladder:{tier:1,wins:0,losses:0,winsThisTier:0},
-    ninjas:[starter],
-    activeNinjaId:starter.id,
-    inventory:{weapons:[],relics:[]},
-    shop:{weapons:[],relics:[]}
+    id:id("n"), name:nm,
+    xp:0, level:1, tp:0,
+    base:{str:1,agi:1,end:1},
+    hp:70, maxHP:70
+  };
+}
+function recalcNinja(n){
+  n.level = 1 + Math.floor((n.xp||0)/100);
+  const STR=n.base.str, AGI=n.base.agi, END=n.base.end;
+  n.maxHP = 55 + END*12 + n.level*6;
+  n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
+  n._derived = {
+    STR,AGI,END,
+    atk: Math.max(2, Math.floor(6 + STR*3 + n.level*1.6)),
+    spd: 1.0 + AGI*0.12,
+    dodge: clamp(0.03 + AGI*0.015, 0.03, 0.28),
+    def: Math.floor(END*0.9 + n.level*0.6),
   };
 }
 
-let save=load();
+function defaultSave(){
+  const starter = makeNinja("Andy Holloway");
+  starter.tp = 10;   // ✅ starting TP
+  recalcNinja(starter);
+  return {
+    currency:{ karma:0, gold:120 },
+    ladder:{ tier:1, wins:0, losses:0, winsThisTier:0 },
+    ninjas:[starter],
+    activeNinjaId: starter.id
+  };
+}
+let save = load();
 function load(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);
     if(!raw) return defaultSave();
     const s=JSON.parse(raw);
     if(!s?.ninjas?.length) return defaultSave();
+    s.currency ??= {karma:0,gold:0};
+    s.ladder ??= {tier:1,wins:0,losses:0,winsThisTier:0};
+    s.activeNinjaId ??= s.ninjas[0].id;
+    for(const n of s.ninjas) recalcNinja(n);
     return s;
   }catch{ return defaultSave(); }
 }
@@ -459,74 +362,315 @@ function persist(){ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
 function activeNinja(){ return save.ninjas.find(n=>n.id===save.activeNinjaId) || save.ninjas[0]; }
 function belt(){ return beltFromXP(activeNinja().xp); }
 
+/* =========================
+   Top bar
+========================= */
 function refreshTop(){
-  const a=activeNinja();
-  $("uiName").textContent=a.name;
-  $("uiHP").textContent=`${a.hp}/${a.maxHP}`;
-  $("uiKarma").textContent=save.currency.karma;
-  $("uiGold").textContent=save.currency.gold;
-  $("uiBelt").textContent=belt();
-  $("uiTier").textContent=save.ladder.tier;
+  const a=activeNinja(); recalcNinja(a);
+  $("uiName").textContent = a.name;
+  $("uiHP").textContent = `${a.hp}/${a.maxHP}`;
+  $("uiKarma").textContent = save.currency.karma;
+  $("uiGold").textContent = save.currency.gold;
+  $("uiBelt").textContent = belt();
+  $("uiTier").textContent = save.ladder.tier;
 }
-
-/* Modals */
-function openModal(id){ $(id).classList.remove("hidden"); }
-function closeModal(id){ $(id).classList.add("hidden"); }
 $("saveBtn").onclick=()=>{ persist(); refreshTop(); };
 $("resetBtn").onclick=()=>{ localStorage.removeItem(SAVE_KEY); save=defaultSave(); persist(); refreshTop(); };
 
+/* =========================
+   Modals
+========================= */
+function openModal(id){ $(id).classList.remove("hidden"); }
+function closeModal(id){ $(id).classList.add("hidden"); }
+$("closeDojo").onclick=()=>closeModal("dojoModal");
+$("closeDai").onclick=()=>closeModal("daiModal");
+
 /* Dojo */
 function renderDojo(){
-  const a=activeNinja();
+  const a=activeNinja(); recalcNinja(a);
   $("activeHere").textContent=a.name;
   $("tpHere").textContent=a.tp;
   $("stSTR").textContent=a.base.str;
   $("stAGI").textContent=a.base.agi;
   $("stEND").textContent=a.base.end;
-  $("trainSTR").disabled = a.tp<=0;
-  $("trainAGI").disabled = a.tp<=0;
-  $("trainEND").disabled = a.tp<=0;
+  $("trainSTR").disabled=a.tp<=0;
+  $("trainAGI").disabled=a.tp<=0;
+  $("trainEND").disabled=a.tp<=0;
 }
 function spendTP(stat){
   const a=activeNinja();
   if(a.tp<=0) return;
-  a.tp--; a.base[stat]++; persist(); refreshTop(); renderDojo();
+  a.tp -= 1;
+  a.base[stat] += 1;
+  recalcNinja(a);
+  persist(); refreshTop(); renderDojo();
 }
 $("trainSTR").onclick=()=>spendTP("str");
 $("trainAGI").onclick=()=>spendTP("agi");
 $("trainEND").onclick=()=>spendTP("end");
-$("closeDojo").onclick=()=>closeModal("dojoModal");
 
-/* Recruit / Weapon / Relic modals kept minimal */
-$("closeRecruit").onclick=()=>closeModal("recruitModal");
-$("closeWeapon").onclick=()=>closeModal("weaponModal");
-$("closeRelic").onclick=()=>closeModal("relicModal");
-
-/* Hospital = full heal */
-function hospitalHeal(){
+/* Daimyo */
+function renderDaimyo(){
   const a=activeNinja();
+  $("dBelt").textContent=belt();
+  $("dXP").textContent=a.xp;
+  $("dNext").textContent=nextBeltXP(a.xp);
+}
+
+/* Hospital action */
+function hospitalHeal(){
+  const a=activeNinja(); recalcNinja(a);
   a.hp = a.maxHP;
   persist(); refreshTop();
 }
 
-/* Battle tab exists but you already have the battle engine in your version.
-   This stub just switches to battle screen so battle.jpg is visible.
-   If your repo has the full battle engine, keep that code below and call startBattle(). */
-function showBattle(on){
-  document.getElementById("battle").classList.toggle("hidden", !on);
-  document.getElementById("town").classList.toggle("hidden", on);
+/* =========================
+   Battle (RESTORED + WORKING)
+========================= */
+const battleEl = $("battle");
+const townEl = $("town");
+function showBattle(v){
+  battleEl.classList.toggle("hidden", !v);
+  townEl.classList.toggle("hidden", v);
 }
-$("skipBtn").onclick=()=>showBattle(false);
 
-/* Tie building actions */
+const canvas=$("battleCanvas");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+  canvas.width = Math.floor(window.innerWidth * devicePixelRatio);
+  canvas.height= Math.floor(window.innerHeight * devicePixelRatio);
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+window.addEventListener("resize", resize);
+resize();
+
+function hpFill(el, cur, max){ el.style.width = `${clamp(cur/max,0,1)*100}%`; }
+
+function roundRect(x,y,w,h,r,fill){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y, x+w,y+h, rr);
+  ctx.arcTo(x+w,y+h, x,y+h, rr);
+  ctx.arcTo(x,y+h, x,y, rr);
+  ctx.arcTo(x,y, x+w,y, rr);
+  if(fill) ctx.fill();
+}
+function drawNinja(x,y,flip=false,weapon="katana"){
+  ctx.save(); ctx.translate(x,y);
+  if(flip) ctx.scale(-1,1);
+
+  ctx.fillStyle="#111";
+  roundRect(-14,-36,28,34,10,true);
+  ctx.beginPath(); ctx.arc(0,-50,14,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle="#f3d6b6";
+  roundRect(-10,-52,20,8,4,true);
+  ctx.fillStyle="#111"; ctx.fillRect(-8,-50,16,2);
+
+  ctx.fillStyle="#111";
+  roundRect(-14,-6,12,10,6,true);
+  roundRect(2,-6,12,10,6,true);
+
+  ctx.strokeStyle = weapon==="staff" ? "#6b3c1d" : "#c7c7c7";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  if(weapon==="staff"){ ctx.moveTo(10,-48); ctx.lineTo(26,-22); }
+  else { ctx.moveTo(12,-40); ctx.lineTo(30,-26); }
+  ctx.stroke();
+
+  ctx.restore();
+}
+const floatTexts=[]; let dust=null;
+function addFloatText(text,x,y,color="#ff3a3a"){ floatTexts.push({text,x,y,vy:-0.65,t:0,color}); }
+function drawFloatTexts(){
+  for(const ft of floatTexts){
+    ft.t += 1; ft.y += ft.vy;
+    ctx.globalAlpha = clamp(1 - ft.t/60, 0, 1);
+    ctx.fillStyle = ft.color;
+    ctx.font="900 16px system-ui";
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.globalAlpha=1;
+  }
+  for(let i=floatTexts.length-1;i>=0;i--) if(floatTexts[i].t>60) floatTexts.splice(i,1);
+}
+function spawnDust(x,y){ dust={x,y,t:0}; }
+function drawDust(){
+  if(!dust) return;
+  dust.t += 1;
+  const a = clamp(1 - dust.t/38, 0, 1);
+  ctx.globalAlpha = a;
+  ctx.fillStyle="rgba(240,220,190,.95)";
+  for(let i=0;i<10;i++){
+    const ox = Math.sin((dust.t+i)*0.55)*14 + (i-5)*6;
+    const oy = Math.cos((dust.t+i)*0.48)*7;
+    ctx.beginPath();
+    ctx.arc(dust.x+ox, dust.y+oy, 18 - dust.t*0.33, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  if(dust.t>38) dust=null;
+}
+
+function makeEnemy(){
+  const a=activeNinja(); recalcNinja(a);
+  const tier=save.ladder.tier;
+  const bIdx=beltIndex(belt());
+  const diff = tier + bIdx*0.7;
+  const lvl = Math.max(1, a.level + rint(-1,2) + Math.floor(diff*0.3));
+  const name=pick(["Okolo Unit","Rogue Ninja","Bandit Clan","Mist Trainee","Iron Ronin","Crimson Scout"]);
+
+  const eSTR = Math.max(1, Math.floor(1 + lvl*0.6 + diff*0.6));
+  const eAGI = Math.max(1, Math.floor(1 + lvl*0.5 + diff*0.5));
+  const eEND = Math.max(1, Math.floor(1 + lvl*0.6 + diff*0.7));
+
+  const maxHP = 55 + eEND*12 + lvl*6;
+  const atk   = Math.max(2, Math.floor(6 + eSTR*3 + lvl*1.6));
+  const spd   = 1.0 + eAGI*0.11;
+  const dodge = clamp(0.03 + eAGI*0.012, 0.03, 0.22);
+  const def   = Math.floor(eEND*0.9 + lvl*0.6);
+
+  return {name, level:lvl, maxHP, hp:maxHP, atk, spd, dodge, def};
+}
+
+function gainRewards(win, enemy){
+  const a=activeNinja();
+  const tier=save.ladder.tier;
+  if(win){
+    save.ladder.wins++;
+    save.ladder.winsThisTier++;
+
+    a.xp += Math.round(18 + enemy.level*6 + tier*4);
+    a.tp += 1;
+    save.currency.gold += Math.round(25 + tier*18 + enemy.level*6);
+    save.currency.karma += Math.round(8 + tier*6);
+
+    recalcNinja(a);
+    a.hp = clamp(a.hp + Math.floor(a.maxHP*0.12), 1, a.maxHP);
+
+    if(save.ladder.winsThisTier >= 3){
+      save.ladder.tier += 1;
+      save.ladder.winsThisTier = 0;
+    }
+  } else {
+    save.ladder.losses++;
+    a.hp = 1;
+  }
+  persist(); refreshTop();
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function fastSim(a, enemy){
+  const pDps = Math.max(1, (a._derived.atk - enemy.def)) * (1000/(520/a._derived.spd));
+  const eDps = Math.max(1, (enemy.atk - a._derived.def)) * (1000/(560/enemy.spd));
+  const eDpsAdj = eDps * (1 - a._derived.dodge);
+  const tE = enemy.hp / pDps;
+  const tP = a.hp / eDpsAdj;
+  const win = tE < tP;
+  if(win){ a.hp = Math.max(1, Math.floor(a.hp - eDpsAdj*tE)); enemy.hp=0; }
+  else { enemy.hp = Math.max(1, Math.floor(enemy.hp - pDps*tP)); a.hp=0; }
+  return win;
+}
+
+function renderFrame(px,ex,y,pW,eW){
+  ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+  drawNinja(px, y, false, pW);
+  drawNinja(ex, y, true, eW);
+  drawDust();
+  drawFloatTexts();
+}
+
+let battling=false, skip=false;
+
+async function startBattle(){
+  if(battling) return;
+  battling=true; skip=false;
+
+  const a=activeNinja(); recalcNinja(a);
+  const enemy=makeEnemy();
+
+  $("pName").textContent = `${a.name} - Lvl ${a.level}`;
+  $("eName").textContent = `${enemy.name} - Lvl ${enemy.level}`;
+  hpFill($("pHPFill"), a.hp, a.maxHP);
+  hpFill($("eHPFill"), enemy.hp, enemy.maxHP);
+
+  showBattle(true);
+
+  let px=window.innerWidth*0.30;
+  let ex=window.innerWidth*0.70;
+  const y=window.innerHeight*0.70;
+  const meet = window.innerWidth*0.50;
+  const pW = pick(["katana","staff"]);
+  const eW = pick(["katana","staff"]);
+
+  while(px < meet-40 && !skip){
+    px += 3.5*(a._derived.spd);
+    ex -= 3.1*(enemy.spd);
+    renderFrame(px,ex,y,pW,eW);
+    await sleep(16);
+  }
+
+  let t=0, pNext=0, eNext=0;
+  const pRate = 520 / a._derived.spd;
+  const eRate = 560 / enemy.spd;
+
+  while(a.hp>0 && enemy.hp>0){
+    if(skip) break;
+    t+=16;
+
+    if(t>=pNext){
+      const dodged = Math.random() < enemy.dodge;
+      if(!dodged){
+        const dmg = Math.max(2, Math.floor(a._derived.atk - enemy.def + rand(-1,2)));
+        enemy.hp = Math.max(0, enemy.hp - dmg);
+        spawnDust(meet, y-20);
+        addFloatText(`-${dmg}`, meet+28, y-52, "#ff3a3a");
+        hpFill($("eHPFill"), enemy.hp, enemy.maxHP);
+      } else addFloatText(`DODGE`, meet+18, y-52, "#3aa8ff");
+      pNext = t + pRate;
+    }
+
+    if(t>=eNext){
+      const dodged = Math.random() < a._derived.dodge;
+      if(!dodged){
+        const dmg = Math.max(2, Math.floor(enemy.atk - a._derived.def + rand(-1,2)));
+        a.hp = Math.max(0, a.hp - dmg);
+        spawnDust(meet, y-20);
+        addFloatText(`-${dmg}`, meet-92, y-52, "#ff3a3a");
+        hpFill($("pHPFill"), a.hp, a.maxHP);
+      } else addFloatText(`DODGE`, meet-102, y-52, "#3aa8ff");
+      eNext = t + eRate;
+    }
+
+    renderFrame(px,ex,y,pW,eW);
+    await sleep(16);
+  }
+
+  const win = skip ? fastSim(a, enemy) : (enemy.hp<=0);
+  gainRewards(win, enemy);
+
+  await sleep(250);
+  showBattle(false);
+  battling=false;
+}
+
+$("skipBtn").onclick=()=>{ skip=true; };
+
+/* =========================
+   Wire up building actions
+========================= */
 $("hsHospital").onclick=()=>hospitalHeal();
 $("hsDojo").onclick=()=>{ renderDojo(); openModal("dojoModal"); };
-$("hsWeapon").onclick=()=>openModal("weaponModal");
-$("hsRecruit").onclick=()=>openModal("recruitModal");
-$("hsRelic").onclick=()=>openModal("relicModal");
-$("hsFight").onclick=()=>showBattle(true);
+$("hsDaimyo").onclick=()=>{ renderDaimyo(); openModal("daiModal"); };
+$("hsRelic").onclick=()=>{ alert("Relic Shop (next: add shop UI here)"); };
+$("hsWeapon").onclick=()=>{ alert("Weapon Shop (next: add shop UI here)"); };
+$("hsRecruit").onclick=()=>{ alert("Recruit (next: roster UI here)"); };
+$("hsFight").onclick=()=>startBattle();
 
-/* init */
+/* Init */
 persist();
 refreshTop();
 </script>
