@@ -1334,16 +1334,23 @@ function genEnemyClan(difficulty){
     difficulty==="hard"   ? avgLv*1.05 :
     avgLv*0.75;
 
-  const clan=[];
-  for(let i=0;i<size;i++){
-    const spread=[1+rand(-0.15,0.25),1+rand(-0.15,0.25),1+rand(-0.15,0.25)];
-    const sum=spread[0]+spread[1]+spread[2];
-    const s=clampEnemyStat((statBase*3)*(spread[0]/sum));
-    const a=clampEnemyStat((statBase*3)*(spread[1]/sum));
-    const e=clampEnemyStat((statBase*3)*(spread[2]/sum));
-    clan.push(makeEnemyNinja({str:s, agi:a, end:e}));
-  }
-  return clan;
+const statBase =
+  difficulty==="medium" ? avgLv*0.75 :
+  difficulty==="hard"   ? avgLv*1.05 :
+  avgLv*0.75;
+
+const pool = statBase * 1.8;
+
+const clan=[];
+for(let i=0;i<size;i++){
+  const spread=[1+rand(-0.15,0.25),1+rand(-0.15,0.25),1+rand(-0.15,0.25)];
+  const sum=spread[0]+spread[1]+spread[2];
+  const s = clampEnemyStat(pool * (spread[0]/sum));
+  const a = clampEnemyStat(pool * (spread[1]/sum));
+  const e = clampEnemyStat(pool * (spread[2]/sum));
+  clan.push(makeEnemyNinja({str:s, agi:a, end:e}));
+}
+return clan;
 }
 
 function makeBossEnemy(){
