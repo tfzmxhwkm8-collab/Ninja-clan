@@ -1329,11 +1329,6 @@ function genEnemyClan(difficulty){
     Math.round(save.ninjas.reduce((s,n)=>{ recalc(n); return s+n.level; },0) / save.ninjas.length)
   );
 
-  const statBase =
-    difficulty==="medium" ? avgLv*0.75 :
-    difficulty==="hard"   ? avgLv*1.05 :
-    avgLv*0.75;
-
 const statBase =
   difficulty==="medium" ? avgLv*0.75 :
   difficulty==="hard"   ? avgLv*1.05 :
