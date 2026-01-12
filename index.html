@@ -1214,63 +1214,82 @@ $("dailyBtn").onclick=()=>{
 };
 
 /* ======================================================
-   BATTLE ENGINE — multi-ninja vs variable enemy clan sizes
-   - Your entire owned roster fights each battle (alive ones)
-   - Enemy clan size varies by selection & can exceed yours
-   - Includes Boss fight: 1 max-level Black Belt style ninja
-   FIXES:
-   - Uses correct button id: battleNextBtn (not battleStepBtn)
-   - Next button advances battle
-   - Auto toggles on/off and stops when battle ends
-   - Retreat cleanly returns to town
-   - HUD + log display updates (bhLeft/bhMid/bhRight + battleSub + battleText)
+   BATTLE ENGINE — AUTO BATTLE + CANVAS ANIMATIONS + HEALTH BARS
+   Drop-in replacement for your current battle engine section.
+
+   Requires existing DOM:
+   - #battleCanvas (960x560)
+   - #bhLeft #bhMid #bhRight (top panels)
+   - #battleTitle #battleSub #battleText (log area)
+   - #battleAutoBtn #battleRetreatBtn (buttons)
+   - #battleSelectModal #battleList + close button id #closeBattleSelect
+
+   NOTES / FIXES INCLUDED:
+   - Fully auto-battle (no "Next" required)
+   - Animated fighters on canvas (idle, lunge, hit flash, KO fade)
+   - Health bars at top (stacked per living ninja)
+   - Battle log renders with line breaks (white-space fix applied in JS)
+   - Scout clan is EXACTLY: 1 White belt enemy with 1/1/1 stats
 ====================================================== */
 
-let battleState=null;
-let battleAutoTimer=null;
+let battleState = null;
+let battleAutoTimer = null;
 
-/* ---------- Enemy creation ---------- */
+let battleRAF = 0;
+let battleLastT = 0;
+let battleCanvas = null;
+let bctx = null;
+
+// ---- tiny helpers (uses your existing clamp/rand/rint/pick/recalc/makeNinja/persist/refreshTop) ----
+const lerp = (a,b,t)=>a+(b-a)*t;
+const easeOut = (t)=>1-Math.pow(1-t,3);
+const easeInOut = (t)=>t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+
+// ---------- Enemy creation ----------
 function makeEnemyNinja(template){
-  const n=makeNinja(template?.name||null);
-  n.tp=0;
-  n.base.str=template.str;
-  n.base.agi=template.agi;
-  n.base.end=template.end;
-  n.equip.weaponId=null;
-  n.equip.relicId=null;
-  n.hp=null;
+  const n = makeNinja(template?.name || null);
+  n.tp = 0;
+  n.base.str = template.str;
+  n.base.agi = template.agi;
+  n.base.end = template.end;
+  n.equip.weaponId = null;
+  n.equip.relicId  = null;
+  n.hp = null;
   recalc(n);
-  n.hp=n.maxHP;
-  n.isEnemy=true;
-  n.isBoss=!!template?.isBoss;
+  n.hp = n.maxHP;
+  n.isEnemy = true;
+  n.isBoss  = !!template?.isBoss;
   return n;
+}
+
+function makeScoutEnemy(){
+  // EXACT request: 1 white belt ninja, 1/1/1
+  return [ makeEnemyNinja({ name:"Scout", str:1, agi:1, end:1, isBoss:false }) ];
 }
 
 function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 40); }
 
 function genEnemyClan(difficulty){
+  if(difficulty === "easy") return makeScoutEnemy(); // Scout clan override
+
   const yourCount = save.ninjas.length;
-
   const base =
-    difficulty==="easy" ? rint(2,4) :
     difficulty==="medium" ? rint(3,5) :
-    difficulty==="hard" ? rint(4,7) :
-    rint(1,1);
+    difficulty==="hard"   ? rint(4,7) :
+    rint(2,4);
 
-  const size =
-    difficulty==="boss" ? 1 :
-    clamp(base + rint(-1,1) + Math.floor(yourCount*0.25), 1, 10);
+  const size = clamp(base + rint(-1,1) + Math.floor(yourCount*0.25), 1, 10);
 
+  // stats scale with your average level
   const avgLv = Math.max(
     1,
-    Math.round(save.ninjas.reduce((s,n)=>{recalc(n);return s+n.level;},0)/save.ninjas.length)
+    Math.round(save.ninjas.reduce((s,n)=>{ recalc(n); return s+n.level; },0) / save.ninjas.length)
   );
 
   const statBase =
-    difficulty==="easy" ? avgLv*0.65 :
     difficulty==="medium" ? avgLv*0.85 :
-    difficulty==="hard" ? avgLv*1.05 :
-    avgLv*1.15;
+    difficulty==="hard"   ? avgLv*1.05 :
+    avgLv*0.75;
 
   const clan=[];
   for(let i=0;i<size;i++){
@@ -1293,13 +1312,14 @@ function makeBossEnemy(){
   const baseEnd=1+each;
 
   const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
+  // baked-in “legendary-ish” power
   boss.base.str += 6; boss.base.agi += 6; boss.base.end += 2;
   recalc(boss); boss.hp=boss.maxHP;
   boss.isBoss=true;
   return [boss];
 }
 
-/* ---------- Your team ---------- */
+// ---------- Your team ----------
 function battleTeamYour(){
   return save.ninjas.map(n=>{
     recalc(n);
@@ -1310,7 +1330,7 @@ function battleTeamYour(){
   });
 }
 
-/* ---------- helpers ---------- */
+// ---------- combat helpers ----------
 function living(team){ return team.filter(n=>n.hp>0); }
 function pickTarget(team){ const alive=living(team); return alive.length?pick(alive):null; }
 
@@ -1334,33 +1354,189 @@ function dealDamage(att, def, mult=1){
   return {dmg, dodged:false, crit:r.crit};
 }
 
-function battleLogPush(line){
-  if(!battleState) return;
-  battleState.log.push(line);
-  if(battleState.log.length>120) battleState.log.shift();
-}
-
 function speedScore(n){ return n.derived.AGI + n.level*0.25 + rand(-0.5,0.5); }
-
 function buildTurnOrder(){
   const all=[...battleState.your, ...battleState.enemy].filter(n=>n.hp>0);
   all.sort((a,b)=>speedScore(b)-speedScore(a));
   return all;
 }
 
-/* ---------- End / rewards ---------- */
+function battleLogPush(line){
+  if(!battleState) return;
+  battleState.log.push(line);
+  if(battleState.log.length>140) battleState.log.shift();
+  renderBattleHUD(); // keep log visible during auto
+}
+
+// ---------- animation model ----------
+function makeFighterVisual(n, side, idx){
+  // side: "L" (your) or "R" (enemy)
+  const lane = idx;
+  const x = side==="L" ? 220 : 740;
+  const y = 210 + lane*75;
+
+  return {
+    id: n.id,
+    side,
+    lane,
+    baseX:x, baseY:y,
+    x, y,
+    bob: rand(0, Math.PI*2),
+    lunge: 0,    // 0..1
+    hitFlash: 0, // 0..1
+    koFade: 0,   // 0..1
+    hpPulse: 0,  // 0..1
+    floating: [], // {text, x,y, vy, life, crit}
+  };
+}
+
+function syncVisuals(){
+  // rebuild visuals if roster size changes
+  battleState.visuals = battleState.visuals || { L:[], R:[] };
+
+  const yAlive = battleState.your;
+  const eAlive = battleState.enemy;
+
+  battleState.visuals.L = yAlive.map((n,i)=> {
+    return battleState.visuals.L.find(v=>v.id===n.id) || makeFighterVisual(n,"L",i);
+  });
+  battleState.visuals.R = eAlive.map((n,i)=> {
+    return battleState.visuals.R.find(v=>v.id===n.id) || makeFighterVisual(n,"R",i);
+  });
+
+  // keep lanes aligned
+  battleState.visuals.L.forEach((v,i)=>{ v.lane=i; v.baseY=210+i*75; });
+  battleState.visuals.R.forEach((v,i)=>{ v.lane=i; v.baseY=210+i*75; });
+}
+
+function visFor(n){
+  const arr = n.isEnemy ? battleState.visuals.R : battleState.visuals.L;
+  return arr.find(v=>v.id===n.id) || null;
+}
+
+// ---------- action queue (auto stepping with timing) ----------
+function enqueueAction(actor, target){
+  const act = {
+    actorId: actor.id,
+    targetId: target?.id || null,
+    t: 0,
+    phase: "windup", // windup -> strike -> recover
+    duration: 0.65,  // seconds
+    done: false,
+  };
+  battleState.queue.push(act);
+}
+
+function planNextRoundIfNeeded(){
+  if(!battleState || battleState.over) return;
+  if(battleState.queue.length>0) return;
+
+  syncVisuals();
+
+  const order = buildTurnOrder();
+  for(const actor of order){
+    if(actor.hp<=0) continue;
+    const foes = actor.isEnemy ? battleState.your : battleState.enemy;
+    const target = pickTarget(foes);
+    if(!target){
+      endBattle(!actor.isEnemy);
+      return;
+    }
+    enqueueAction(actor, target);
+  }
+}
+
+function stepAction(dt){
+  if(!battleState || battleState.over) return;
+
+  if(battleState.queue.length===0){
+    // end-of-round bookkeeping
+    battleState.round++;
+    planNextRoundIfNeeded();
+    return;
+  }
+
+  const act = battleState.queue[0];
+  const actor = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.actorId) || null;
+  const target = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.targetId) || null;
+
+  if(!actor || actor.hp<=0 || !target || target.hp<=0){
+    // invalid action (someone died)
+    battleState.queue.shift();
+    return;
+  }
+
+  const va = visFor(actor);
+  const vt = visFor(target);
+
+  act.t += dt;
+  const p = clamp(act.t / act.duration, 0, 1);
+
+  // animate lunge
+  if(va){
+    if(p < 0.35){
+      va.lunge = easeOut(p/0.35) * 0.9;
+    }else if(p < 0.55){
+      va.lunge = 0.9;
+    }else{
+      va.lunge = (1 - easeOut((p-0.55)/0.45)) * 0.9;
+    }
+  }
+
+  // apply damage at the "strike" moment once
+  if(!act.didHit && p >= 0.42){
+    act.didHit = true;
+
+    const res = dealDamage(actor, target, 1);
+
+    const an = actor.isBoss ? "👹 Boss" : (actor.isEnemy ? "Enemy" : actor.name);
+    const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Your Ninja") : target.name;
+
+    if(res.dodged){
+      battleLogPush(`${an} attacks → ${tn} dodges!`);
+      if(vt){
+        vt.floating.push({ text:"DODGE", x:vt.x, y:vt.y-30, vy:-22, life:0.9, crit:false });
+      }
+    }else{
+      battleLogPush(`${an} hits ${tn} for ${res.dmg}${res.crit?" (CRIT)":"."}`);
+
+      if(vt){
+        vt.hitFlash = 1;
+        vt.hpPulse = 1;
+        vt.floating.push({ text:`-${res.dmg}`, x:vt.x, y:vt.y-34, vy:-26, life:0.95, crit:res.crit });
+      }
+      if(target.hp<=0){
+        battleLogPush(`💀 ${tn} is down!`);
+        if(vt) vt.koFade = 0.001; // start fade
+      }
+    }
+
+    // win/lose checks right after hit
+    if(living(battleState.enemy).length===0){ endBattle(true); return; }
+    if(living(battleState.your).length===0){ endBattle(false); return; }
+  }
+
+  // finish action
+  if(p >= 1){
+    battleState.queue.shift();
+  }
+}
+
+// ---------- End / rewards ----------
 function endBattle(victory){
   if(!battleState) return;
-  battleState.over=true;
-  battleState.victory=victory;
+  battleState.over = true;
+  battleState.victory = victory;
 
-  const rewardGold = victory ? (120 + battleState.enemyStart*35) : 40;
-  const rewardKarma = victory ? (25 + battleState.enemyStart*8) : 10;
-  save.currency.gold += rewardGold;
+  const rewardGold  = victory ? (120 + battleState.enemyStart*35) : 40;
+  const rewardKarma = victory ? (25 + battleState.enemyStart*8)  : 10;
+  save.currency.gold  += rewardGold;
   save.currency.karma += rewardKarma;
 
-  if(victory) save.meta.wins=(save.meta.wins||0)+1;
-  else save.meta.losses=(save.meta.losses||0)+1;
+  save.meta.wins   = save.meta.wins   || 0;
+  save.meta.losses = save.meta.losses || 0;
+  if(victory) save.meta.wins++;
+  else save.meta.losses++;
 
   battleLogPush(
     victory
@@ -1373,85 +1549,60 @@ function endBattle(victory){
   renderBattleHUD();
 }
 
-/* ---------- Turn step ---------- */
-function stepBattleRound(){
-  if(!battleState || battleState.over) return;
-
-  const order = buildTurnOrder();
-
-  for(const actor of order){
-    if(battleState.over) break;
-    if(actor.hp<=0) continue;
-
-    const isEnemy = actor.isEnemy;
-    const foes   = isEnemy ? battleState.your : battleState.enemy;
-
-    const target = pickTarget(foes);
-    if(!target){
-      endBattle(!isEnemy);
-      break;
-    }
-
-    const res = dealDamage(actor, target, 1);
-
-    const an = actor.isBoss ? "👹 Boss" : (isEnemy ? "Enemy" : actor.name);
-    const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Your Ninja") : target.name;
-
-    if(res.dodged){
-      battleLogPush(`${an} attacks → ${tn} dodges!`);
-    }else{
-      battleLogPush(`${an} hits ${tn} for ${res.dmg}${res.crit?" (CRIT)":"."}`);
-      if(target.hp<=0) battleLogPush(`💀 ${tn} is down!`);
-    }
-
-    if(living(battleState.enemy).length===0){ endBattle(true); break; }
-    if(living(battleState.your).length===0){ endBattle(false); break; }
-  }
-
-  battleState.round++;
-  renderBattleHUD();
-}
-
-/* ---------- Start / leave ---------- */
+// ---------- Start / leave ----------
 function startBattle(kind){
   stopBattleAuto();
+  initBattleRenderer();
 
-  const your = battleTeamYour();
-  const enemy = (kind==="boss") ? makeBossEnemy() : genEnemyClan(kind);
+  const your  = battleTeamYour();
+  const enemy = (kind==="boss") ? makeBossEnemy()
+              : (kind==="hard") ? genEnemyClan("hard")
+              : (kind==="medium") ? genEnemyClan("medium")
+              : genEnemyClan("easy"); // scout override is inside genEnemyClan
 
-  battleState={
+  battleState = {
     kind,
-    round:1,
-    over:false,
-    victory:false,
+    round: 1,
+    over: false,
+    victory: false,
     your,
     enemy,
     enemyStart: enemy.length,
-    log:[`⚔️ Battle start: ${kind.toUpperCase()} — Your clan ${your.length} vs Enemy ${enemy.length}`]
+    log: [`⚔️ Battle start: ${kind.toUpperCase()} — Your clan ${your.length} vs Enemy ${enemy.length}`],
+    queue: [],
+    visuals: {L:[], R:[]}
   };
+
+  syncVisuals();
+  planNextRoundIfNeeded();
 
   $("town").classList.add("hidden");
   $("battle").classList.remove("hidden");
+
   renderBattleHUD();
+  startBattleAuto(); // auto starts immediately (your request)
 }
 
 function leaveBattle(){
   stopBattleAuto();
-  battleState=null;
+  battleState = null;
+  cancelAnimationFrame(battleRAF);
+  battleRAF = 0;
+
   $("battle").classList.add("hidden");
   $("town").classList.remove("hidden");
 }
 
-/* ---------- HUD + buttons ---------- */
+// ---------- HUD + log (includes white-space fix) ----------
 function renderBattleHUD(){
   if(!battleState) return;
 
-  const yourAlive = living(battleState.your).length;
-  const enemyAlive = living(battleState.enemy).length;
+  const yAlive = living(battleState.your).length;
+  const eAlive = living(battleState.enemy).length;
 
-  $("bhLeft").textContent  = `Your: ${yourAlive}/${battleState.your.length}`;
+  $("bhLeft").textContent  = `Your: ${yAlive}/${battleState.your.length}`;
   $("bhMid").textContent   = `Round ${battleState.round} • ${battleState.kind.toUpperCase()}`;
-  $("bhRight").textContent = `Enemy: ${enemyAlive}/${battleState.enemy.length}`;
+  $("bhRight").textContent = `Enemy: ${eAlive}/${battleState.enemy.length}`;
 
   $("battleTitle").textContent = battleState.over
     ? (battleState.victory ? "Victory!" : "Defeat…")
@@ -1460,48 +1611,331 @@ function renderBattleHUD(){
   $("battleSub").textContent =
     `Your ${battleState.your.length} vs Enemy ${battleState.enemy.length} (start ${battleState.enemyStart})`;
 
-  $("battleText").textContent = battleState.log.slice(-8).join("\n") || "—";
+  const bt = $("battleText");
+  // WHITE-SPACE UI FIX (so \n shows as new lines)
+  bt.style.whiteSpace = "pre-line";
+  bt.textContent = (battleState.log.slice(-8).join("\n")) || "—";
 
-  const nextBtn = document.getElementById("battleNextBtn"); // FIXED
+  // Next is not needed anymore; disable if it exists
+  const nextBtn = document.getElementById("battleNextBtn");
+  if(nextBtn){
+    nextBtn.disabled = true;
+    nextBtn.style.display = "none";
+  }
+
   const autoBtn = document.getElementById("battleAutoBtn");
-  if(nextBtn) nextBtn.disabled = battleState.over;
-  if(autoBtn) autoBtn.disabled = battleState.over;
+  if(autoBtn){
+    autoBtn.disabled = battleState.over;
+    autoBtn.textContent = battleAutoTimer ? "Auto: ON" : "Auto";
+  }
 
   if(battleState.over) stopBattleAuto();
 }
 
-/* ---------- Auto ---------- */
+// ---------- Auto loop ----------
 function startBattleAuto(){
   if(!battleState || battleState.over) return;
   if(battleAutoTimer) return;
-  $("battleAutoBtn").textContent="Auto: ON";
-  battleAutoTimer=setInterval(()=>{
-    if(!battleState || battleState.over){ stopBattleAuto(); return; }
-    stepBattleRound();
-  }, 550);
-}
-function stopBattleAuto(){
-  if(battleAutoTimer){ clearInterval(battleAutoTimer); battleAutoTimer=null; }
-  const btn=document.getElementById("battleAutoBtn");
-  if(btn) btn.textContent="Auto";
+  battleAutoTimer = setInterval(()=>{
+    // the actual stepping is done in RAF (smooth), but this is a safety heartbeat
+    if(!battleState || battleState.over) stopBattleAuto();
+  }, 500);
+  renderBattleHUD();
 }
 
-/* ---------- Bind battle UI handlers (idempotent) ---------- */
-if(document.getElementById("battleNextBtn")){
-  $("battleNextBtn").onclick=()=>stepBattleRound();
+function stopBattleAuto(){
+  if(battleAutoTimer){
+    clearInterval(battleAutoTimer);
+    battleAutoTimer = null;
+  }
+  const btn = document.getElementById("battleAutoBtn");
+  if(btn) btn.textContent = "Auto";
 }
+
+// ---------- Renderer / animations ----------
+function initBattleRenderer(){
+  if(battleCanvas && bctx) return;
+  battleCanvas = $("battleCanvas");
+  bctx = battleCanvas.getContext("2d");
+}
+
+function updateVisuals(dt){
+  if(!battleState) return;
+  syncVisuals();
+
+  const updateOne = (n, v)=>{
+    // idle bob
+    v.bob += dt * 3.2;
+    const bobY = Math.sin(v.bob) * 2.5;
+
+    // lunge shifts toward center
+    const dir = (v.side==="L") ? 1 : -1;
+    const lungeX = v.lunge * 34 * dir;
+
+    v.x = v.baseX + lungeX;
+    v.y = v.baseY + bobY;
+
+    // decay flashes
+    if(v.hitFlash>0) v.hitFlash = Math.max(0, v.hitFlash - dt*3.5);
+    if(v.hpPulse>0)  v.hpPulse  = Math.max(0, v.hpPulse  - dt*2.8);
+
+    // KO fade if dead
+    if(n.hp<=0){
+      v.koFade = Math.min(1, (v.koFade||0) + dt*0.6);
+    }else{
+      v.koFade = 0;
+    }
+
+    // floating text
+    v.floating = v.floating.filter(f=>f.life>0);
+    for(const f of v.floating){
+      f.life -= dt;
+      f.y += f.vy*dt;
+      f.vy -= 18*dt; // slight gravity-ish
+    }
+  };
+
+  battleState.your.forEach(n=>{
+    const v = visFor(n);
+    if(v) updateOne(n, v);
+  });
+  battleState.enemy.forEach(n=>{
+    const v = visFor(n);
+    if(v) updateOne(n, v);
+  });
+}
+
+function drawHealthStacks(){
+  if(!battleState) return;
+
+  const ctx = bctx;
+  const w = battleCanvas.width;
+
+  const drawStack = (team, side)=>{
+    const alive = living(team);
+    const x0 = side==="L" ? 16 : w-16;
+    const alignRight = side==="R";
+
+    const barW = 260;
+    const barH = 12;
+    const gap = 8;
+
+    alive.slice(0,5).forEach((n,i)=>{
+      const y = 14 + i*(barH+gap);
+
+      const pct = n.maxHP ? (n.hp/n.maxHP) : 0;
+      const name = n.isBoss ? "Boss" : (n.isEnemy ? "Enemy" : n.name);
+
+      const bx = alignRight ? (x0 - barW) : x0;
+
+      // back
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(0,0,0,.35)";
+      ctx.fillRect(bx, y, barW, barH);
+
+      // fill
+      ctx.fillStyle = "rgba(255,255,255,.86)";
+      ctx.fillRect(bx, y, Math.max(0, barW*pct), barH);
+
+      // outline
+      ctx.strokeStyle = "rgba(0,0,0,.55)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx+0.5, y+0.5, barW-1, barH-1);
+
+      // text
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(0,0,0,.85)";
+      ctx.font = "900 10px system-ui";
+      const label = `${name}  ${n.hp}/${n.maxHP}`;
+      const tx = alignRight ? (bx + barW - 6) : (bx + 6);
+      ctx.textAlign = alignRight ? "right" : "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, tx, y + barH/2);
+    });
+  };
+
+  drawStack(battleState.your, "L");
+  drawStack(battleState.enemy, "R");
+}
+
+function drawFighter(n, v){
+  const ctx = bctx;
+  const dead = n.hp<=0;
+
+  const fade = dead ? (1 - (v.koFade||0)) : 1;
+  const flash = v.hitFlash || 0;
+  const pulse = v.hpPulse || 0;
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, fade);
+
+  // shadow
+  ctx.globalAlpha *= 0.55;
+  ctx.fillStyle = "rgba(0,0,0,.35)";
+  ctx.beginPath();
+  ctx.ellipse(v.x, v.y+26, 18, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = Math.max(0, fade);
+
+  // body
+  const scale = 1 + pulse*0.05;
+  ctx.translate(v.x, v.y);
+  ctx.scale(scale, scale);
+
+  // colors
+  const isEnemy = n.isEnemy;
+  const baseCol = isEnemy ? "rgba(255,255,255,.90)" : "rgba(255,255,255,.92)";
+  const ink = isEnemy ? "rgba(0,0,0,.85)" : "rgba(0,0,0,.85)";
+
+  // hit flash tint
+  if(flash>0){
+    ctx.fillStyle = `rgba(255,120,24,${0.35*flash})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // head
+  ctx.fillStyle = baseCol;
+  ctx.beginPath();
+  ctx.arc(0,-18,10,0,Math.PI*2);
+  ctx.fill();
+
+  // mask/body
+  ctx.fillStyle = baseCol;
+  ctx.beginPath();
+  ctx.roundRect?.(-12,-8,24,24,8);
+  if(!ctx.roundRect){
+    // fallback
+    ctx.beginPath();
+    ctx.moveTo(-12,-8+8);
+    ctx.arcTo(-12,-8, -12+8,-8, 8);
+    ctx.arcTo(12,-8, 12,-8+8, 8);
+    ctx.arcTo(12,16, 12-8,16, 8);
+    ctx.arcTo(-12,16, -12,16-8, 8);
+    ctx.closePath();
+  }
+  ctx.fill();
+
+  // outline
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0,-18,10,0,Math.PI*2);
+  ctx.stroke();
+
+  // simple weapon line
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  const dir = v.side==="L" ? 1 : -1;
+  ctx.beginPath();
+  ctx.moveTo(10*dir, 2);
+  ctx.lineTo((22+v.lunge*6)*dir, -10);
+  ctx.stroke();
+
+  // name tag
+  ctx.globalAlpha *= 0.95;
+  ctx.fillStyle = "rgba(0,0,0,.75)";
+  ctx.font = (n.isBoss ? "900 11px system-ui" : "900 10px system-ui");
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText(n.isBoss ? "BOSS" : (n.isEnemy ? "Enemy" : ""), 0, -28);
+
+  ctx.restore();
+
+  // floating numbers
+  if(v.floating?.length){
+    for(const f of v.floating){
+      const a = clamp(f.life/0.95, 0, 1);
+      bctx.globalAlpha = a;
+      bctx.font = f.crit ? "1000 16px system-ui" : "1000 14px system-ui";
+      bctx.fillStyle = f.crit ? "rgba(255,120,24,.95)" : "rgba(255,255,255,.92)";
+      bctx.textAlign = "center";
+      bctx.textBaseline = "middle";
+      bctx.fillText(f.text, f.x, f.y);
+    }
+    bctx.globalAlpha = 1;
+  }
+}
+
+function drawBattle(){
+  const ctx = bctx;
+  ctx.clearRect(0,0,battleCanvas.width,battleCanvas.height);
+
+  // backdrop tint (so battle.jpg still shows through)
+  ctx.fillStyle = "rgba(0,0,0,.12)";
+  ctx.fillRect(0,0,battleCanvas.width,battleCanvas.height);
+
+  // health bars
+  drawHealthStacks();
+
+  // mid line
+  ctx.strokeStyle = "rgba(255,255,255,.10)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(battleCanvas.width/2, 90);
+  ctx.lineTo(battleCanvas.width/2, battleCanvas.height-24);
+  ctx.stroke();
+
+  // fighters
+  for(const n of battleState.your){
+    const v = visFor(n);
+    if(v) drawFighter(n,v);
+  }
+  for(const n of battleState.enemy){
+    const v = visFor(n);
+    if(v) drawFighter(n,v);
+  }
+}
+
+function battleLoop(ts){
+  if(!battleState){
+    battleRAF = requestAnimationFrame(battleLoop);
+    return;
+  }
+
+  const t = ts/1000;
+  const dt = clamp((t - (battleLastT||t)), 0, 0.05);
+  battleLastT = t;
+
+  // auto-battle always running until over
+  if(!battleState.over){
+    // ensure we have actions
+    planNextRoundIfNeeded();
+    // advance one action smoothly
+    stepAction(dt);
+  }
+
+  updateVisuals(dt);
+  drawBattle();
+
+  battleRAF = requestAnimationFrame(battleLoop);
+}
+
+// ---------- Bind battle UI handlers (idempotent) ----------
+initBattleRenderer();
+if(!battleRAF) battleRAF = requestAnimationFrame(battleLoop);
+
+// Auto button now means "toggle auto pause" (auto starts ON)
 if(document.getElementById("battleAutoBtn")){
   $("battleAutoBtn").onclick=()=>{
     if(!battleState || battleState.over) return;
-    if(battleAutoTimer) stopBattleAuto();
-    else startBattleAuto();
+    // pause = stop stepping actions (we'll just stop autoTimer as a flag)
+    if(battleAutoTimer){
+      stopBattleAuto(); // pause
+    }else{
+      startBattleAuto(); // resume
+    }
+    renderBattleHUD();
   };
 }
+
 if(document.getElementById("battleRetreatBtn")){
   $("battleRetreatBtn").onclick=()=>leaveBattle();
 }
 
-/* ---------- Battle select modal (launches battles) ---------- */
+// ---------- Battle select modal (launches battles) ----------
 $("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
 
 function renderBattleSelect(){
@@ -1509,7 +1943,7 @@ function renderBattleSelect(){
   list.innerHTML="";
 
   const options=[
-    {id:"easy",   name:"Scout Clan (Easy)",   desc:"Smaller enemy clan. Good for new ninjas."},
+    {id:"easy",   name:"Scout Clan (Easy)",   desc:"Exactly 1 weak White Belt (1/1/1)."},
     {id:"medium", name:"Rival Clan (Medium)", desc:"Balanced clan size + stats."},
     {id:"hard",   name:"Elite Clan (Hard)",   desc:"Bigger clan + tougher stats."},
     {id:"boss",   name:"Boss Clan",           desc:"1 powerful Black Belt-style boss."},
