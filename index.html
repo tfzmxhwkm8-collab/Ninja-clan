@@ -149,6 +149,7 @@
   .rar.Rare{color:#1a63c8}
   .rar.Epic{color:#7a2ac9}
   .rar.Legendary{color:#b06b00}
+  .rar.Mythic{color:#d43cff}
 
   /* Tabs */
   .tabs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
@@ -417,7 +418,7 @@
         <button class="btn ghost small" id="closeWeapon">Close</button>
       </div>
 
-      <div class="muted">Weapons all have different stats. More stats = higher gold cost. Best weapon gives <b>+15 STR +15 AGI +5 END</b>.</div>
+      <div class="muted">Weapons all have different stats. More stats = higher gold cost. Best weapon gives <b>+25 STR +25 AGI +5 END</b>.</div>
 
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="buyWeaponBtn">Buy Selected</button>
@@ -515,7 +516,7 @@ function trainCost(statVal){
 }
 
 /* ---------- Weapons: distinct stats + cost scaling ----------
-   Best: +15 STR +15 AGI +5 END (Legendary)
+   Best: +25 STR +25 AGI +5 END (Legendary)
    Goes down from there with cost
 ----------------------------------------------------------- */
 const WEAPON_TIERS=[
@@ -535,6 +536,7 @@ const WEAPON_CATALOG=[
   {name:"Moon Blade",  art:"moon"},
   {name:"Storm Edge",  art:"storm"},
   {name:"Kunai Chain", art:"chain"},
+  {name:"Dragon Dagger", art:"dragonDagger"},
 ];
 
 const RELIC_CATALOG=[
@@ -693,9 +695,36 @@ let weaponSelectedId=null, relicSelectedId=null;
 
 function ensureWeaponStock(){
   if(!save.shop.weapons?.length){
-    save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
+    const dragon = {
+      id: "w_dragon_dagger_fixed",
+      type: "weapon",
+      rarity: "Mythic",
+      name: "Dragon Dagger",
+      art: "dragonDagger",
+      bonus: { str: 25, agi: 25, end: 5 },
+      cost: 20000
+    };
+
+    // keep dragon always in the shop + fill the rest with random weapons
+    save.shop.weapons = [dragon, ...Array.from({length:5}, ()=>makeWeapon())];
+  } else {
+    // If shop already exists, ensure dragon is present (in case of old saves)
+    const hasDragon = save.shop.weapons.some(w => w.id === "w_dragon_dagger_fixed");
+    if(!hasDragon){
+      const dragon = {
+        id: "w_dragon_dagger_fixed",
+        type: "weapon",
+        rarity: "Mythic",
+        name: "Dragon Dagger",
+        art: "dragonDagger",
+        bonus: { str: 25, agi: 25, end: 5 },
+        cost: 20000
+      };
+      save.shop.weapons.unshift(dragon);
+    }
   }
 }
+    
 function ensureRelicStock(){
   if(!save.shop.relics?.length){
     save.shop.relics = Array.from({length:6}, ()=>makeRelic());
@@ -791,6 +820,10 @@ function drawWeaponSilhouette(ctx, kind){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(20,-24); ctx.stroke();
   }else if(kind==="fan"){
     ctx.beginPath(); ctx.arc(0,0,10,Math.PI*1.2,Math.PI*1.8); ctx.stroke();
+  }else if(kind==="dragonDagger"){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(12,-12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(12,-12); ctx.lineTo(18,-8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6,-6); ctx.lineTo(10,-10); ctx.stroke();
   }else if(kind==="chain"){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(14,-12); ctx.stroke();
     for(let i=0;i<4;i++){
@@ -2135,315 +2168,9 @@ $("resetBtn").onclick=()=>{
   alert("Slot reset!");
 };
 
-/* ---------- Init (safe) ---------- */
-try{
-  persist();
-  refreshTop();
-}catch(e){
-  console.error(e);
-  alert("Init error: " + (e?.message||e));
-}
     
 /* ======================================================
-   PART 4 — RECRUIT +  + SHOP GENERATION + PROFILES
-   Adds: 
-         unique weapon looks (art), relic tuning, save slot UX polish,
-         and fixes for common “undefined” crashes.
-====================================================== */
 
-
-/* ---------- Fix: activeNinja must always return something ---------- */
-function activeNinja(){
-  ensureSaveIntegrity();
-  let a = save.ninjas.find(n=>n.id===save.activeId);
-  if(!a && save.ninjas[0]){ a=save.ninjas[0]; save.activeId=a.id; }
-  if(!a){
-    const starter = makeNinja("Starter Ninja");
-    starter.tp=10;
-    save.ninjas=[starter];
-    save.activeId=starter.id;
-    a=starter;
-  }
-  return a;
-}
-
-/* ---------- Recruit tuning (clan size advantage) ---------- */
-function recruitCost(){
-  ensureSaveIntegrity();
-  // grows slowly so building a clan is feasible
-  return Math.round(160 + (save.ninjas.length-1)*120);
-}
-function makeRecruit(){
-  // recruits are weaker at first but can train
-  const n = makeNinja();
-  // give small randomized starting stats
-  n.base.str = 1 + rint(0,2);
-  n.base.agi = 1 + rint(0,2);
-  n.base.end = 1 + rint(0,2);
-  n.tp = 0;
-  n.hp = null;
-  recalc(n);
-  n.hp = n.maxHP;
-  return n;
-}
-
-/* override existing recruit button handler (safe to call multiple times) */
-if($("recruitBtn")){
-  $("recruitBtn").onclick=()=>{
-    ensureSaveIntegrity();
-    const cost=recruitCost();
-    if(save.currency.gold < cost) return;
-    save.currency.gold -= cost;
-
-    const n = makeRecruit();
-    save.ninjas.push(n);
-    rosterSelectedId = n.id;
-
-    persist(); refreshTop();
-    renderRoster();
-  };
-}
-
-/* ---------- Roster UI needs updated cost display ---------- */
-function renderRoster(){
-  ensureSaveIntegrity();
-  const cost=recruitCost();
-  $("recruitCost").textContent=cost;
-  $("recruitBtn").disabled = save.currency.gold < cost;
-
-  const list=$("rosterList");
-  list.innerHTML="";
-
-  for(const n of save.ninjas){
-    recalc(n);
-    const isActive = n.id===save.activeId;
-    const selected = n.id===rosterSelectedId;
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${n.name} <span class="pill">Lv${n.level}</span> ${isActive?`<span class="pill">ACTIVE</span>`:""}
-        </div>
-        <div class="muted">STR ${n.derived.STR} • AGI ${n.derived.AGI} • END ${n.derived.END} • HP ${n.hp}/${n.maxHP}</div>
-      </div>
-      <button class="btn ghost small" data-sel="${n.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-sel]").forEach(btn=>{
-    btn.onclick=()=>{ rosterSelectedId=btn.getAttribute("data-sel"); renderRoster(); };
-  });
-
-  $("setActiveBtn").disabled = !rosterSelectedId;
-}
-
-/* keep set active */
-if($("setActiveBtn")){
-  $("setActiveBtn").onclick=()=>{
-    if(!rosterSelectedId) return;
-    save.activeId=rosterSelectedId;
-    persist(); refreshTop(); renderRoster();
-  };
-}
-
-/* ---------- Shops: re-render uses new weapon/relic objects ---------- */
-function renderWeaponShop(){
-  ensureWeaponStock();
-  const list=$("weaponList"); list.innerHTML="";
-
-  for(const w of save.shop.weapons){
-    const selected = w.id===weaponSelectedId;
-    const owned = save.inventory.weapons.some(x=>x.id===w.id);
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000">
-          ${w.name} <span class="pill rar ${w.rarity}">${w.rarity}</span>
-          <span class="pill">🪙 ${w.cost}</span> ${owned?`<span class="pill">OWNED</span>`:""}
-        </div>
-        <div class="muted">+STR ${w.bonus.str} • +AGI ${w.bonus.agi} • +END ${w.bonus.end}</div>
-      </div>
-      <button class="btn ghost small" data-wsel="${w.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-wsel]").forEach(b=>{
-    b.onclick=()=>{ weaponSelectedId=b.getAttribute("data-wsel"); renderWeaponShop(); };
-  });
-
-  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
-  $("buyWeaponBtn").disabled = !sel || save.currency.gold < sel.cost || save.inventory.weapons.some(x=>x.id===sel.id);
-  $("equipWeaponBtn").disabled = !sel || (!save.inventory.weapons.some(x=>x.id===sel.id) && save.currency.gold < sel.cost);
-}
-
-function renderRelicShop(){
-  ensureRelicStock();
-  const list=$("relicList"); list.innerHTML="";
-
-  for(const r of save.shop.relics){
-    const selected = r.id===relicSelectedId;
-    const owned = save.inventory.relics.some(x=>x.id===r.id);
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000">
-          ${r.name} <span class="pill rar ${r.rarity}">${r.rarity}</span>
-          <span class="pill">☯ ${r.cost}</span> ${owned?`<span class="pill">OWNED</span>`:""}
-        </div>
-        <div class="muted">+STR ${r.bonus.str} • +AGI ${r.bonus.agi} • +END ${r.bonus.end}</div>
-      </div>
-      <button class="btn ghost small" data-rsel="${r.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-rsel]").forEach(b=>{
-    b.onclick=()=>{ relicSelectedId=b.getAttribute("data-rsel"); renderRelicShop(); };
-  });
-
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  $("buyRelicBtn").disabled = !sel || save.currency.karma < sel.cost || save.inventory.relics.some(x=>x.id===sel.id);
-  $("equipRelicBtn").disabled = !sel || (!save.inventory.relics.some(x=>x.id===sel.id) && save.currency.karma < sel.cost);
-}
-
-/* ---------- Buy/equip handlers (idempotent) ---------- */
-$("buyWeaponBtn").onclick=()=>{
-  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
-  if(!sel) return;
-  if(save.currency.gold < sel.cost) return;
-  if(save.inventory.weapons.some(x=>x.id===sel.id)) return;
-  save.currency.gold -= sel.cost;
-  save.inventory.weapons.push(sel);
-  persist(); refreshTop();
-  renderWeaponShop(); renderDojoNinja();
-};
-
-$("equipWeaponBtn").onclick=()=>{
-  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
-  if(!sel) return;
-
-  if(!save.inventory.weapons.some(x=>x.id===sel.id)){
-    if(save.currency.gold < sel.cost) return;
-    save.currency.gold -= sel.cost;
-    save.inventory.weapons.push(sel);
-  }
-  const a=activeNinja();
-  a.equip.weaponId=sel.id;
-  recalc(a);
-  persist(); refreshTop();
-  renderWeaponShop(); renderDojoNinja();
-};
-
-$("refreshWeaponBtn").onclick=()=>{
-  save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
-  weaponSelectedId = save.shop.weapons[0]?.id || null;
-  persist();
-  renderWeaponShop();
-};
-
-$("buyRelicBtn").onclick=()=>{
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  if(!sel) return;
-  if(save.currency.karma < sel.cost) return;
-  if(save.inventory.relics.some(x=>x.id===sel.id)) return;
-  save.currency.karma -= sel.cost;
-  save.inventory.relics.push(sel);
-  persist(); refreshTop();
-  renderRelicShop(); renderDojoNinja();
-};
-
-$("equipRelicBtn").onclick=()=>{
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  if(!sel) return;
-
-  if(!save.inventory.relics.some(x=>x.id===sel.id)){
-    if(save.currency.karma < sel.cost) return;
-    save.currency.karma -= sel.cost;
-    save.inventory.relics.push(sel);
-  }
-  const a=activeNinja();
-  a.equip.relicId=sel.id;
-  recalc(a);
-  persist(); refreshTop();
-  renderRelicShop(); renderDojoNinja();
-};
-
-$("refreshRelicBtn").onclick=()=>{
-  save.shop.relics = Array.from({length:6}, ()=>makeRelic());
-  relicSelectedId = save.shop.relics[0]?.id || null;
-  persist();
-  renderRelicShop();
-};
-
-/* ---------- Profile loading must re-bind safely ---------- */
-function renderProfiles(){
-  const list=$("profilesList");
-  list.innerHTML="";
-
-  for(const sname of ["slot1","slot2","slot3"]){
-    const slot = profiles.slots[sname];
-    const isActive = profiles.active===sname;
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.innerHTML=`
-      <div>
-        <div style="font-weight:1000">${sname.toUpperCase()} ${isActive?`<span class="pill">ACTIVE</span>`:""}</div>
-        <div class="muted">${slotSummary(slot)}</div>
-      </div>
-      <div class="row">
-        <button class="btn ghost small" data-load="${sname}">Load</button>
-        <button class="btn ghost small" data-new="${sname}">${slot?"Reset":"Create"}</button>
-      </div>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-load]").forEach(b=>{
-    b.onclick=()=>{
-      const sn=b.getAttribute("data-load");
-      if(!profiles.slots[sn]) return;
-      profiles.active=sn;
-      save=profiles.slots[sn];
-      ensureSaveIntegrity();
-      persistProfiles();
-      refreshTop();
-      closeModal("profilesModal");
-    };
-  });
-
-  list.querySelectorAll("button[data-new]").forEach(b=>{
-    b.onclick=()=>{
-      const sn=b.getAttribute("data-new");
-      profiles.slots[sn]=defaultSlot();
-      profiles.active=sn;
-      save=profiles.slots[sn];
-      ensureSaveIntegrity();
-      persistProfiles();
-      refreshTop();
-      closeModal("profilesModal");
-    };
-  });
-}
-
-/* ---------- Re-run integrity on init and after profile changes ---------- */
-ensureSaveIntegrity();
-
-/* If user opens shops after this part is applied, stock will be correct. */
-
-/* ======================================================
-   END PART 4
 ====================================================== */
 /* ======================================================
    PART 5 — INTEGRITY + FINAL BINDING + SAFETY GUARDS
