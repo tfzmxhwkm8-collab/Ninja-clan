@@ -1422,93 +1422,8 @@ function startBattle(kind){
   $("town").classList.add("hidden");
   $("battle").classList.remove("hidden");
   renderBattleHUD();
-}
-
-/* ---------- Battle UI: build minimal HUD inside placeholder ---------- */
-function ensureBattleUI(){
-  const note=$("battleNote");
-  if(note.querySelector("#battleHud")) return;
-
-  note.innerHTML = `
-    <div id="battleHud" style="text-align:left">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <div style="font-weight:1000">Battle</div>
-        <div class="row" style="gap:8px">
-          <button class="btn primary small" id="battleStepBtn">Next Round</button>
-          <button class="btn ghost small" id="battleAutoBtn">Auto x10</button>
-          <button class="btn small" id="battleBackBtn">Back</button>
-        </div>
-      </div>
-
-      <div class="muted" id="battleMeta" style="margin-top:8px"></div>
-
-      <div class="row" style="margin-top:10px;align-items:flex-start">
-        <div style="flex:1;min-width:220px">
-          <div style="font-weight:1000;margin-bottom:6px">Your Clan</div>
-          <div class="list" id="battleYourList"></div>
-        </div>
-        <div style="flex:1;min-width:220px">
-          <div style="font-weight:1000;margin-bottom:6px">Enemy Clan</div>
-          <div class="list" id="battleEnemyList"></div>
-        </div>
-      </div>
-
-      <div style="margin-top:10px">
-        <div style="font-weight:1000;margin-bottom:6px">Log</div>
-        <div class="list" id="battleLog" style="max-height:220px"></div>
-      </div>
-    </div>
-  `;
-
-  note.querySelector("#battleStepBtn").onclick=()=>stepBattleRound();
-  note.querySelector("#battleAutoBtn").onclick=()=>{
-    for(let i=0;i<10;i++){
-      if(!battleState || battleState.over) break;
-      stepBattleRound();
-    }
-  };
-  note.querySelector("#battleBackBtn").onclick=()=>{
-    // leave battle; keep HP as-is (hospital heals)
-    battleState=null;
-    $("battle").classList.add("hidden");
-    $("town").classList.remove("hidden");
-    refreshTop();
-  };
-}
-
-function miniRow(n, labelOverride=null){
-  recalc(n);
-  const label = labelOverride ?? (n.isEnemy ? (n.isBoss?"👹 Boss Ronin":"Enemy") : n.name);
-  const hpPct = Math.round((n.hp/n.maxHP)*100);
-  const dead = n.hp<=0;
-  return `
-    <div class="item" style="${dead?"opacity:.55":""}">
-      <div style="min-width:0">
-        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${label} ${dead?`<span class="pill">DOWN</span>`:""}
-        </div>
-        <div class="muted">HP ${n.hp}/${n.maxHP} (${hpPct}%) • ATK ${n.derived.atk} • DEF ${n.derived.def} • DODGE ${Math.round(n.derived.dodge*100)}%</div>
-      </div>
-      <div class="pill">${n.derived.STR}/${n.derived.AGI}/${n.derived.END}</div>
-    </div>
-  `;
-}
 
 function renderBattleHUD(){
-  ensureBattleUI();
-  if(!battleState) return;
-
-  $("battleMeta").textContent =
-    `Round ${battleState.round} • Your alive: ${living(battleState.your).length}/${battleState.your.length} • ` +
-    `Enemy alive: ${living(battleState.enemy).length}/${battleState.enemy.length}` +
-    (battleState.over ? (battleState.victory ? " • ✅ Victory" : " • ❌ Defeat") : "");
-
-  $("battleYourList").innerHTML = battleState.your.map(n=>miniRow(n)).join("");
-  $("battleEnemyList").innerHTML = battleState.enemy.map(n=>miniRow(n)).join("");
-
-  const logEl=$("battleLog");
-  logEl.innerHTML = battleState.log.map(line=>`<div class="item" style="justify-content:flex-start">${line}</div>`).join("");
-  logEl.scrollTop = logEl.scrollHeight;
 
   // disable controls if over
   const stepBtn=document.getElementById("battleStepBtn");
@@ -1715,7 +1630,6 @@ function makeRelic(){
 }
 
 /* ---------- Ensure stock + refresh helpers ---------- */
-let weaponSelectedId=null, relicSelectedId=null;
 
 function ensureWeaponStock(){
   ensureSaveIntegrity();
