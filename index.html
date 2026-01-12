@@ -1,15 +1,16 @@
+<!-- PART 1/5 START -->
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>Ninja Clan RPG (Step 2)</title>
+<title>Ninja Clan RPG</title>
 
 <style>
   html,body{
     margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
     font-family:system-ui,-apple-system,Segoe UI,Roboto;
-    touch-action:manipulation;-webkit-user-select:none;user-select:none
+    touch-action:manipulation;-webkit-user-select:none;user-select:none;
   }
   :root{
     --pad-top: env(safe-area-inset-top);
@@ -17,6 +18,7 @@
     --pad-bottom: env(safe-area-inset-bottom);
     --pad-left: env(safe-area-inset-left);
     --wood1:#a56a3c; --wood2:#7a4b2a; --ink:#22140b; --accent:#ff7a18;
+    --paper1:#f7edd6; --paper2:#f0e0bf;
   }
   *{-webkit-tap-highlight-color:transparent}
   .hidden{display:none!important}
@@ -100,8 +102,8 @@
     padding:14px;
   }
   .card{
-    width:min(720px,96%);
-    background:linear-gradient(#f7edd6,#f0e0bf);
+    width:min(760px,96%);
+    background:linear-gradient(var(--paper1),var(--paper2));
     border:2px solid rgba(0,0,0,.18);
     border-radius:18px;
     padding:14px;
@@ -149,7 +151,7 @@
   .rar.Legendary{color:#b06b00}
 
   /* Tabs */
-  .tabs{display:flex;gap:8px;margin-top:8px}
+  .tabs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .tab{
     padding:8px 10px;border-radius:999px;font-weight:1000;font-size:12px;
     border:1px solid rgba(0,0,0,.14);
@@ -168,13 +170,13 @@
     margin-top:10px;
   }
   #dojoCanvas{
-    width:120px;height:120px;
+    width:140px;height:140px;
     border-radius:14px;
     border:1px solid rgba(0,0,0,.12);
     background:rgba(0,0,0,.08);
   }
 
-  /* Battle placeholder */
+  /* Battle scene */
   #battle{ position:absolute; inset:0; z-index:60; }
   #battleBg{
     position:absolute; inset:0;
@@ -184,26 +186,59 @@
     background-repeat:no-repeat;
     transform:scale(1.02);
   }
-  #battleOverlay{
-    position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center;
-    padding:calc(18px + var(--pad-bottom));
+  #battleHud{
+    position:absolute; left:0; right:0; top:0;
+    padding:calc(10px + var(--pad-top)) calc(10px + var(--pad-right)) 10px calc(10px + var(--pad-left));
     z-index:70;
+    display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
   }
-  #battleNote{
-    width:min(720px,96%);
+  #battleHud .panel{
     background:rgba(255,255,255,.85);
-    border:2px solid rgba(0,0,0,.18);
+    border:2px solid rgba(0,0,0,.16);
     border-radius:14px;
-    padding:12px 12px;
+    padding:8px 10px;
+    box-shadow:0 14px 34px rgba(0,0,0,.18);
+    color:#1d120b;
     font-weight:950;
-    text-align:center;
+    font-size:12px;
   }
+  #battleStageWrap{
+    position:absolute; inset:0;
+    padding-top:calc(70px + var(--pad-top));
+    padding-bottom:calc(16px + var(--pad-bottom));
+    z-index:65;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #battleCanvas{
+    width:min(960px,96vw);
+    height:min(560px,62vh);
+    border-radius:18px;
+    border:2px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.16);
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+  }
+  #battleLog{
+    position:absolute; left:calc(10px + var(--pad-left));
+    right:calc(10px + var(--pad-right));
+    bottom:calc(10px + var(--pad-bottom));
+    z-index:75;
+    background:rgba(255,255,255,.88);
+    border:2px solid rgba(0,0,0,.16);
+    border-radius:14px;
+    padding:10px 10px;
+    font-size:12px;
+    color:#1d120b;
+    box-shadow:0 14px 34px rgba(0,0,0,.18);
+  }
+  #battleLog .muted{font-size:11px}
+  #battleLogButtons{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 </style>
 </head>
+
 <body>
   <div id="topbar">
     <div class="barL">
-      <div class="chip">Build <b>STEP-2</b></div>
+      <div class="chip">Build <b>FULL</b></div>
       <div class="chip">Active <b id="uiName">—</b></div>
       <div class="chip">Lv <b id="uiLevel">—</b></div>
       <div class="chip">HP <b id="uiHP">—</b></div>
@@ -224,7 +259,6 @@
   <div id="town">
     <div id="townLayer">
       <div id="townBg"></div>
-
       <button class="hotspot" id="hsHospital"><div class="label">Hospital</div></button>
       <button class="hotspot" id="hsDojo"><div class="label">Dojo</div></button>
       <button class="hotspot" id="hsDaimyo"><div class="label">Daimyo</div></button>
@@ -235,15 +269,25 @@
     </div>
   </div>
 
-  <!-- Battle placeholder -->
+  <!-- Battle -->
   <div id="battle" class="hidden">
     <div id="battleBg"></div>
-    <div id="battleOverlay">
-      <div id="battleNote">
-        Step 2 uses a placeholder battle screen to confirm <b>battle.jpg</b> loads.
-        <div style="margin-top:10px">
-          <button class="btn" id="battleBackBtn">BACK</button>
-        </div>
+    <div id="battleHud">
+      <div class="panel" id="bhLeft">—</div>
+      <div class="panel" id="bhMid">—</div>
+      <div class="panel" id="bhRight">—</div>
+    </div>
+    <div id="battleStageWrap">
+      <canvas id="battleCanvas" width="960" height="560"></canvas>
+    </div>
+    <div id="battleLog">
+      <div style="font-weight:1000" id="battleTitle">Battle</div>
+      <div class="muted" id="battleSub">—</div>
+      <div id="battleText" style="margin-top:6px">—</div>
+      <div id="battleLogButtons">
+        <button class="btn primary" id="battleNextBtn">Next</button>
+        <button class="btn" id="battleAutoBtn">Auto</button>
+        <button class="btn ghost" id="battleRetreatBtn">Retreat</button>
       </div>
     </div>
   </div>
@@ -262,7 +306,7 @@
       </div>
 
       <div class="tabPane" id="paneTrain">
-        <div class="muted">Level = TP spent + 1. Training costs increase at higher stats (soft caps).</div>
+        <div class="muted">Belt + Level are tied to <b>TP spent</b>. Training has soft caps.</div>
 
         <div class="statGrid">
           <div class="stat">Strength<br><b id="stSTR">1</b><div class="muted">Cost: <b id="cSTR">1</b> TP</div></div>
@@ -282,11 +326,11 @@
       </div>
 
       <div class="tabPane hidden" id="paneNinja">
-        <div class="muted">Stats + equipment. Equip items you own.</div>
+        <div class="muted">Equip weapons/relics you own. Weapons have unique looks and bonuses.</div>
 
         <div id="dojoPreviewWrap">
-          <canvas id="dojoCanvas" width="120" height="120"></canvas>
-          <div style="min-width:200px;flex:1">
+          <canvas id="dojoCanvas" width="140" height="140"></canvas>
+          <div style="min-width:220px;flex:1">
             <div style="font-weight:1000;font-size:14px" id="djName">—</div>
             <div class="muted" id="djLine">—</div>
             <div class="muted" id="djBelt">—</div>
@@ -335,16 +379,12 @@
         <h3 class="title">Daimyo</h3>
         <button class="btn ghost small" id="closeDai">Close</button>
       </div>
-      <div class="muted">Belt is tied to TP spent (Level = TP spent + 1).</div>
+      <div class="muted">Belt thresholds (by TP spent): Yellow 5 • Orange 12 • Green 20 • Blue 40 • Brown 60 • Black 80</div>
 
       <div class="statGrid">
         <div class="stat">Belt<br><b id="dBelt">—</b></div>
         <div class="stat">Level<br><b id="dLevel">—</b></div>
         <div class="stat">TP Spent<br><b id="dSpent">—</b></div>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <div class="stat" style="flex:1">Belts: Yellow 5 • Orange 12 • Green 20 • Blue 40 • Brown 60 • Black 80</div>
       </div>
     </div>
   </div>
@@ -357,7 +397,7 @@
         <button class="btn ghost small" id="closeRecruit">Close</button>
       </div>
 
-      <div class="muted">Recruit ninjas to grow your clan. More ninjas = advantage in Step 3 battles.</div>
+      <div class="muted">Recruit ninjas to grow your clan. In battles, <b>your whole clan fights</b> (one at a time) so having more ninjas is an advantage.</div>
 
       <div class="row" style="margin-top:10px">
         <button class="btn primary" id="recruitBtn">Recruit (🪙 <span id="recruitCost">200</span>)</button>
@@ -376,7 +416,7 @@
         <button class="btn ghost small" id="closeWeapon">Close</button>
       </div>
 
-      <div class="muted">Weapons cost 🪙 gold. Stronger stat bonuses cost more.</div>
+      <div class="muted">Weapons all have different stats. More stats = higher gold cost. Best weapon gives <b>+15 STR +15 AGI +5 END</b>.</div>
 
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="buyWeaponBtn">Buy Selected</button>
@@ -396,7 +436,7 @@
         <button class="btn ghost small" id="closeRelic">Close</button>
       </div>
 
-      <div class="muted">Relics cost ☯ karma. They add smaller but useful bonuses.</div>
+      <div class="muted">Relics cost ☯ karma. Smaller bonuses that stack with weapons.</div>
 
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="buyRelicBtn">Buy Selected</button>
@@ -415,7 +455,7 @@
         <h3 class="title">Choose Battle</h3>
         <button class="btn ghost small" id="closeBattleSelect">Close</button>
       </div>
-      <div class="muted">Pick an enemy clan. Step 3 adds the real battle engine + animations.</div>
+      <div class="muted">Select an enemy clan. Enemy clan sizes vary. Boss battle is always a single max-level black belt ninja.</div>
       <div class="list" id="battleList"></div>
     </div>
   </div>
@@ -427,878 +467,31 @@
         <h3 class="title">Profiles</h3>
         <button class="btn ghost small" id="closeProfiles">Close</button>
       </div>
-      <div class="muted">3 save slots. Switch anytime. Each slot saves its own clan.</div>
-      <div class="list" id="profilesList"></div>
-    </div>
-  </div>
-
-  <script>
-   /* ======================================================
-   STEP 2 — FULL TOWN LOOP
-====================================================== */
-
-const PROFILE_KEY="ninja_rebuild_profiles_step2_v2";
-const $ = (id)=>document.getElementById(id);
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const rand=(a,b)=>a+Math.random()*(b-a);
-const rint=(a,b)=>Math.floor(rand(a,b+1));
-const pick=a=>a[Math.floor(Math.random()*a.length)];
-const uid=p=>p+"_"+Math.random().toString(16).slice(2)+"_"+Date.nowAGI=n.base.agi+eq.agi;
-  const END=n.base.end+eq.end;
-
-  const spent=tpSpent(n);
-  n.level = 1 + spent;
-
-  n.maxHP = 60 + END*12 + n.level*4;
-  n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
-
-  n.derived = {
-    STR,AGI,END,
-    atk: Math.floor(6 + STR*3 + n.level*1.2),
-    def: Math.floor(END + n.level*0.6),
-    dodge: clamp(0.03 + AGI*0.015, 0.03, 0.30)
-  };
-}
-
-/* ---------- Modal helpers ---------- */
-function openModal(id){ $(id).classList.remove("hidden"); }
-function closeModal(id){ $(id).classList.add("hidden"); }
-
-/* ---------- Top UI ---------- */
-function refreshTop(){
-  for(const n of save.ninjas) recalc(n);
-  const a=activeNinja();
-  const spent=tpSpent(a);
-  const belt=beltFromSpent(spent);
-
-  $("uiName").textContent=a.name;
-  $("uiLevel").textContent=a.level;
-  $("uiHP").textContent=`${a.hp}/${a.maxHP}`;
-  $("uiTP").textContent=a.tp;
-  $("uiBelt").textContent=belt;
-  $("uiGold").textContent=save.currency.gold;
-  $("uiKarma").textContent=save.currency.karma;
-}
-
-/* ---------- Dojo tabs ---------- */
-function setDojoTab(which){
-  $("tabTrain").classList.toggle("active", which==="train");
-  $("tabNinja").classList.toggle("active", which==="ninja");
-  $("paneTrain").classList.toggle("hidden", which!=="train");
-  $("paneNinja").classList.toggle("hidden", which!=="ninja");
-  if(which==="train") renderDojoTraining();
-  if(which==="ninja") renderDojoNinja();
-}
-$("tabTrain").onclick=()=>setDojoTab("train");
-$("tabNinja").onclick=()=>setDojoTab("ninja");
-$("closeDojo").onclick=()=>closeModal("dojoModal");
-
-function renderDojoTraining(){
-  const a=activeNinja(); recalc(a);
-  $("activeHere").textContent=a.name;
-  $("tpHere").textContent=a.tp;
-
-  $("stSTR").textContent=a.base.str;
-  $("stAGI").textContent=a.base.agi;
-  $("stEND").textContent=a.base.end;
-
-  const cS=trainCost(a.base.str);
-  const cA=trainCost(a.base.agi);
-  const cE=trainCost(a.base.end);
-  $("cSTR").textContent=cS;
-  $("cAGI").textContent=cA;
-  $("cEND").textContent=cE;
-
-  $("trainSTR").disabled=a.tp<cS;
-  $("trainAGI").disabled=a.tp<cA;
-  $("trainEND").disabled=a.tp<cE;
-}
-function spendTP(stat){
-  const a=activeNinja();
-  const cost=trainCost(a.base[stat]);
-  if(a.tp<cost) return;
-  a.tp-=cost;
-  a.base[stat] += 1;
-  recalc(a);
-  persist(); refreshTop();
-  renderDojoTraining();
-  renderDojoNinja();
-}
-$("trainSTR").onclick=()=>spendTP("str");
-$("trainAGI").onclick=()=>spendTP("agi");
-$("trainEND").onclick=()=>spendTP("end");
-
-/* ---------- Dojo ninja preview (belt + simple arms) ---------- */
-function roundRect(ctx,x,y,w,h,r,fill=true){
-  const rr=Math.min(r,w/2,h/2);
-  ctx.beginPath();
-  ctx.moveTo(x+rr,y);
-  ctx.arcTo(x+w,y, x+w,y+h, rr);
-  ctx.arcTo(x+w,y+h, x,y+h, rr);
-  ctx.arcTo(x,y+h, x,y, rr);
-  ctx.arcTo(x,y, x+w,y, rr);
-  ctx.closePath();
-  if(fill) ctx.fill();
-}
-function drawDojoPreview(){
-  const c=$("dojoCanvas");
-  const ctx=c.getContext("2d");
-  ctx.clearRect(0,0,c.width,c.height);
-
-  const a=activeNinja(); recalc(a);
-  const belt=beltFromSpent(tpSpent(a));
-  const beltCol=BELT_COLOR[belt]||"#f5f5f5";
-  const eq=equipBonus(a);
-
-  ctx.save();
-  ctx.translate(60,78);
-
-  // head
-  ctx.fillStyle="#111";
-  ctx.beginPath(); ctx.arc(0,-38,16,0,Math.PI*2); ctx.fill();
-
-  // mask strip
-  ctx.fillStyle="#f3d6b6";
-  roundRect(ctx,-12,-44,24,10,5,true);
-  ctx.fillStyle="#111"; ctx.fillRect(-10,-40,20,3);
-
-  // body
-  ctx.fillStyle="#111";
-  roundRect(ctx,-18,-26,36,36,12,true);
-
-  // arms (simple)
-  ctx.strokeStyle="#111";
-  ctx.lineWidth=6;
-  ctx.lineCap="round";
-  ctx.beginPath(); ctx.moveTo(-16,-18); ctx.lineTo(-30,-4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo( 16,-18); ctx.lineTo( 32,-6); ctx.stroke();
-
-  // belt
-  ctx.fillStyle=beltCol;
-  roundRect(ctx,-18,-6,36,8,4,true);
-
-  // legs
-  ctx.fillStyle="#111";
-  roundRect(ctx,-16,10,14,12,6,true);
-  roundRect(ctx,  2,10,14,12,6,true);
-
-  // weapon hint
-  ctx.strokeStyle = eq.weapon ? "#cfd2d6" : "rgba(255,255,255,.25)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(26,-10);
-  ctx.lineTo(42,-28);
-  ctx.stroke();
-
-  ctx.restore();
-}
-function renderDojoNinja(){
-  const a=activeNinja(); recalc(a);
-  const eq=equipBonus(a);
-  const spent=tpSpent(a);
-  const belt=beltFromSpent(spent);
-
-  $("djName").textContent = `${a.name} (Lv ${a.level})`;
-  $("djLine").textContent = `HP ${a.hp}/${a.maxHP} • TP ${a.tp} • Spent ${spent}`;
-  $("djBelt").textContent = `Belt: ${belt}`;
-
-  $("djBase").textContent = `${a.base.str}/${a.base.agi}/${a.base.end}`;
-  $("djBonus").textContent = `+${eq.str}/+${eq.agi}/+${eq.end}`;
-  $("djDerived").textContent = `${a.derived.atk}/${a.derived.def}/${Math.round(a.derived.dodge*100)}%`;
-
-  const wName = eq.weapon ? `${eq.weapon.name} (${eq.weapon.rarity})` : "None";
-  const rName = eq.relic ? `${eq.relic.name} (${eq.relic.rarity})` : "None";
-  $("djEquipped").textContent = `Weapon: ${wName} • Relic: ${rName}`;
-
-  // Owned weapon select
-  const wSel=$("djWeaponSelect");
-  wSel.innerHTML = `<option value="">None</option>`;
-  for(const w of save.inventory.weapons){
-    const opt=document.createElement("option");
-    opt.value=w.id;
-    opt.textContent=`${w.name} [${w.rarity}] (+${w.bonus.str}/+${w.bonus.agi}/+${w.bonus.end})`;
-    if(a.equip.weaponId===w.id) opt.selected=true;
-    wSel.appendChild(opt);
-  }
-
-  // Owned relic select
-  const rSel=$("djRelicSelect");
-  rSel.innerHTML = `<option value="">None</option>`;
-  for(const r of save.inventory.relics){
-    const opt=document.createElement("option");
-    opt.value=r.id;
-    opt.textContent=`${r.name} [${r.rarity}] (+${r.bonus.str}/+${r.bonus.agi}/+${r.bonus.end})`;
-    if(a.equip.relicId===r.id) opt.selected=true;
-    rSel.appendChild(opt);
-  }
-
-  drawDojoPreview();
-}
-
-$("djEquipWeapon").onclick=()=>{
-  const a=activeNinja();
-  a.equip.weaponId = $("djWeaponSelect").value || null;
-  recalc(a); persist(); refreshTop(); renderDojoNinja();
-};
-$("djUnequipWeapon").onclick=()=>{
-  const a=activeNinja();
-  a.equip.weaponId=null;
-  recalc(a); persist(); refreshTop(); renderDojoNinja();
-};
-$("djEquipRelic").onclick=()=>{
-  const a=activeNinja();
-  a.equip.relicId = $("djRelicSelect").value || null;
-  recalc(a); persist(); refreshTop(); renderDojoNinja();
-};
-$("djUnequipRelic").onclick=()=>{
-  const a=activeNinja();
-  a.equip.relicId=null;
-  recalc(a); persist(); refreshTop(); renderDojoNinja();
-};
-
-/* ---------- Daimyo ---------- */
-$("closeDai").onclick=()=>closeModal("daiModal");
-function renderDaimyo(){
-  const a=activeNinja();
-  const spent=tpSpent(a);
-  $("dBelt").textContent=beltFromSpent(spent);
-  $("dLevel").textContent=a.level;
-  $("dSpent").textContent=spent;
-}
-
-/* ---------- Recruit ---------- */
-$("closeRecruit").onclick=()=>closeModal("recruitModal");
-let rosterSelectedId=null;
-
-function recruitCost(){
-  return 200 + (save.ninjas.length-1)*150;
-}
-function renderRoster(){
-  const cost=recruitCost();
-  $("recruitCost").textContent=cost;
-  $("recruitBtn").disabled = save.currency.gold < cost;
-
-  const list=$("rosterList");
-  list.innerHTML="";
-  for(const n of save.ninjas){
-    recalc(n);
-    const isActive = n.id===save.activeId;
-    const selected = n.id===rosterSelectedId;
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${n.name} <span class="pill">Lv${n.level}</span> ${isActive?`<span class="pill">ACTIVE</span>`:""}
-        </div>
-        <div class="muted">STR ${n.derived.STR} • AGI ${n.derived.AGI} • END ${n.derived.END} • HP ${n.hp}/${n.maxHP}</div>
-      </div>
-      <button class="btn ghost small" data-sel="${n.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-  list.querySelectorAll("button[data-sel]").forEach(btn=>{
-    btn.onclick=()=>{ rosterSelectedId=btn.getAttribute("data-sel"); renderRoster(); };
-  });
-
-  $("setActiveBtn").disabled = !rosterSelectedId;
-}
-
-$("recruitBtn").onclick=()=>{
-  const cost=recruitCost();
-  if(save.currency.gold < cost) return;
-
-  save.currency.gold -= cost;
-  const n=makeNinja();
-  n.tp = 0; // recruits start with 0 TP (can change later)
-  recalc(n);
-  save.ninjas.push(n);
-  rosterSelectedId=n.id;
-
-  persist(); refreshTop(); renderRoster();
-};
-$("setActiveBtn").onclick=()=>{
-  if(!rosterSelectedId) return;
-  save.activeId=rosterSelectedId;
-  persist(); refreshTop(); renderRoster();
-};/* ---------- Shops ---------- */
-let weaponSelectedId=null, relicSelectedId=null;
-
-function ensureWeaponStock(){
-  if(!save.shop.weapons?.length){
-    save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
-  }
-}
-function ensureRelicStock(){
-  if(!save.shop.relics?.length){
-    save.shop.relics = Array.from({length:6}, ()=>makeRelic());
-  }
-}
-
-function renderWeaponShop(){
-  ensureWeaponStock();
-  const list=$("weaponList"); list.innerHTML="";
-
-  for(const w of save.shop.weapons){
-    const selected = w.id===weaponSelectedId;
-    const owned = save.inventory.weapons.some(x=>x.id===w.id);
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000">
-          ${w.name} <span class="pill rar ${w.rarity}">${w.rarity}</span>
-          <span class="pill">🪙 ${w.cost}</span> ${owned?`<span class="pill">OWNED</span>`:""}
-        </div>
-        <div class="muted">+STR ${w.bonus.str} • +AGI ${w.bonus.agi} • +END ${w.bonus.end}</div>
-      </div>
-      <button class="btn ghost small" data-wsel="${w.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-wsel]").forEach(b=>{
-    b.onclick=()=>{ weaponSelectedId=b.getAttribute("data-wsel"); renderWeaponShop(); };
-  });
-
-  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
-  $("buyWeaponBtn").disabled = !sel || save.currency.gold < sel.cost || save.inventory.weapons.some(x=>x.id===sel.id);
-  $("equipWeaponBtn").disabled = !sel || (!save.inventory.weapons.some(x=>x.id===sel.id) && save.currency.gold < sel.cost);
-}
-
-function renderRelicShop(){
-  ensureRelicStock();
-  const list=$("relicList"); list.innerHTML="";
-
-  for(const r of save.shop.relics){
-    const selected = r.id===relicSelectedId;
-    const owned = save.inventory.relics.some(x=>x.id===r.id);
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000">
-          ${r.name} <span class="pill rar ${r.rarity}">${r.rarity}</span>
-          <span class="pill">☯ ${r.cost}</span> ${owned?`<span class="pill">OWNED</span>`:""}
-        </div>
-        <div class="muted">+STR ${r.bonus.str} • +AGI ${r.bonus.agi} • +END ${r.bonus.end}</div>
-      </div>
-      <button class="btn ghost small" data-rsel="${r.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-rsel]").forEach(b=>{
-    b.onclick=()=>{ relicSelectedId=b.getAttribute("data-rsel"); renderRelicShop(); };
-  });
-
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  $("buyRelicBtn").disabled = !sel || save.currency.karma < sel.cost || save.inventory.relics.some(x=>x.id===sel.id);
-  $("equipRelicBtn").disabled = !sel || (!save.inventory.relics.some(x=>x.id===sel.id) && save.currency.karma < sel.cost);
-}
-
-$("buyWeaponBtn").onclick=()=>{
-  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
-  if(!sel) return;
-  if(save.currency.gold < sel.cost) return;
-  if(save.inventory.weapons.some(x=>x.id===sel.id)) return;
-  save.currency.gold -= sel.cost;
-  save.inventory.weapons.push(sel);
-  persist(); refreshTop();
-  renderWeaponShop();
-  renderDojoNinja();
-};
-$("equipWeaponBtn").onclick=()=>{
-  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
-  if(!sel) return;
-
-  if(!save.inventory.weapons.some(x=>x.id===sel.id)){
-    if(save.currency.gold < sel.cost) return;
-    save.currency.gold -= sel.cost;
-    save.inventory.weapons.push(sel);
-  }
-  const a=activeNinja();
-  a.equip.weaponId=sel.id;
-  recalc(a);
-  persist(); refreshTop();
-  renderWeaponShop();
-  renderDojoNinja();
-};
-$("refreshWeaponBtn").onclick=()=>{
-  save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
-  weaponSelectedId = save.shop.weapons[0]?.id || null;
-  persist();
-  renderWeaponShop();
-};
-$("closeWeapon").onclick=()=>closeModal("weaponModal");
-
-$("buyRelicBtn").onclick=()=>{
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  if(!sel) return;
-  if(save.currency.karma < sel.cost) return;
-  if(save.inventory.relics.some(x=>x.id===sel.id)) return;
-  save.currency.karma -= sel.cost;
-  save.inventory.relics.push(sel);
-  persist(); refreshTop();
-  renderRelicShop();
-  renderDojoNinja();
-};
-$("equipRelicBtn").onclick=()=>{
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  if(!sel) return;
-
-  if(!save.inventory.relics.some(x=>x.id===sel.id)){
-    if(save.currency.karma < sel.cost) return;
-    save.currency.karma -= sel.cost;
-    save.inventory.relics.push(sel);
-  }
-  const a=activeNinja();
-  a.equip.relicId=sel.id;
-  recalc(a);
-  persist(); refreshTop();
-  renderRelicShop();
-  renderDojoNinja();
-};
-$("refreshRelicBtn").onclick=()=>{
-  save.shop.relics = Array.from({length:6}, ()=>makeRelic());
-  relicSelectedId = save.shop.relics[0]?.id || null;
-  persist();
-  renderRelicShop();
-};
-$("closeRelic").onclick=()=>closeModal("relicModal");
-
-/* ---------- Profiles ---------- */
-$("closeProfiles").onclick=()=>closeModal("profilesModal");
-
-function slotSummary(slot){
-  if(!slot) return "Empty slot";
-  const a = slot.ninjas?.[0];
-  if(!a) return "Empty slot";
-  const spent = (a.base?.str-1||0)+(a.base?.agi-1||0)+(a.base?.end-1||0);
-  const belt = beltFromSpent(spent);
-  return `${slot.ninjas.length} ninjas • ${belt} • 🪙${slot.currency.gold} • ☯${slot.currency.karma}`;
-}
-function renderProfiles(){
-  const list=$("profilesList");
-  list.innerHTML="";
-
-  for(const sname of ["slot1","slot2","slot3"]){
-    const slot = profiles.slots[sname];
-    const isActive = profiles.active===sname;
-
-    const row=document.createElement("div");
-    row.className="item";
-    row.innerHTML=`
-      <div>
-        <div style="font-weight:1000">${sname.toUpperCase()} ${isActive?`<span class="pill">ACTIVE</span>`:""}</div>
-        <div class="muted">${slotSummary(slot)}</div>
-      </div>
-      <div class="row">
-        <button class="btn ghost small" data-load="${sname}">Load</button>
-        <button class="btn ghost small" data-new="${sname}">${slot?"Reset":"Create"}</button>
-      </div>
-    `;
-    list.appendChild(row);
-  }
-
-  list.querySelectorAll("button[data-load]").forEach(b=>{
-    b.onclick=()=>{
-      const sn=b.getAttribute("data-load");
-      if(!profiles.slots[sn]) return;
-      profiles.active=sn;
-      save=profiles.slots[sn];
-      persistProfiles();
-      refreshTop();
-      closeModal("profilesModal");
-    };
-  });
-
-  list.querySelectorAll("button[data-new]").forEach(b=>{
-    b.onclick=()=>{
-      const sn=b.getAttribute("data-new");
-      profiles.slots[sn]=defaultSlot();
-      profiles.active=sn;
-      save=profiles.slots[sn];
-      persistProfiles();
-      refreshTop();
-      closeModal("profilesModal");
-    };
-  });
-}
-
-/* ---------- Daily meditation (30 min TP reward) ---------- */
-$("dailyBtn").onclick=()=>{
-  const now=Date.now();
-  const last=save.daily?.lastClaim||0;
-  const cd=30*60*1000;
-  if(now-last < cd){
-    const mins=Math.ceil((cd-(now-last))/60000);
-    alert(`Come back in ${mins} min`);
-    return;
-  }
-  const a=activeNinja();
-  a.tp += 3; // reward
-  save.daily.lastClaim = now;
-  persist(); refreshTop();
-  alert("+3 TP!");
-};
-
-/* ---------- Battle select (Step 2 placeholder) ---------- */
-$("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
-function renderBattleSelect(){
-  const list=$("battleList");
-  list.innerHTML="";
-
-  const options=[
-    {name:"Scout Clan (Easy)",desc:"Small enemy clan."},
-    {name:"Rival Clan (Medium)",desc:"Balanced enemy clan."},
-    {name:"Elite Clan (Hard)",desc:"Bigger enemy clan."},
-    {name:"Boss Clan",desc:"Step 3 adds the real boss fight."},
-  ];
-  for(const o of options){
-    const row=document.createElement("div");
-    row.className="item";
-    row.innerHTML=`
-      <div>
-        <div style="font-weight:1000">${o.name}</div>
-        <div class="muted">${o.desc}</div>
-      </div>
-      <button class="btn primary small" data-battle="${o.name}">Select</button>
-    `;
-    list.appendChild(row);
-  }
-  list.querySelectorAll("button[data-battle]").forEach(b=>{
-    b.onclick=()=>{
-      closeModal("battleSelectModal");
-      // show placeholder battle screen (to confirm battle.jpg loads)
-      $("town").classList.add("hidden");
-      $("battle").classList.remove("hidden");
-    };
-  });
-}
-
-/* ---------- Buildings ---------- */
-$("hsHospital").onclick=()=>{
-  const a=activeNinja(); recalc(a);
-  a.hp=a.maxHP;
-  persist(); refreshTop();
-};
-
-$("hsDojo").onclick=()=>{
-  setDojoTab("train");
-  renderDojoTraining();
-  renderDojoNinja();
-  openModal("dojoModal");
-};
-
-$("hsDaimyo").onclick=()=>{
-  renderDaimyo();
-  openModal("daiModal");
-};
-
-$("hsRecruit").onclick=()=>{
-  rosterSelectedId = save.activeId;
-  renderRoster();
-  openModal("recruitModal");
-};
-
-$("hsWeapon").onclick=()=>{
-  ensureWeaponStock();
-  weaponSelectedId = save.shop.weapons[0]?.id || null;
-  renderWeaponShop();
-  openModal("weaponModal");
-};
-
-$("hsRelic").onclick=()=>{
-  ensureRelicStock();
-  relicSelectedId = save.shop.relics[0]?.id || null;
-  renderRelicShop();
-  openModal("relicModal");
-};
-
-$("hsFight").onclick=()=>{
-  renderBattleSelect();
-  openModal("battleSelectModal");
-};
-
-/* battle placeholder back */
-$("battleBackBtn").onclick=()=>{
-  $("battle").classList.add("hidden");
-  $("town").classList.remove("hidden");
-};
-
-/* ---------- Top buttons ---------- */
-$("profilesBtn").onclick=()=>{
-  renderProfiles();
-  openModal("profilesModal");
-};
-
-$("saveBtn").onclick=()=>{ persist(); refreshTop(); };
-
-$("resetBtn").onclick=()=>{
-  profiles.slots[profiles.active]=defaultSlot();
-  save=profiles.slots[profiles.active];
-  persistProfiles();
-  refreshTop();
-  alert("Slot reset!");
-};
-
-/* ---------- Init ---------- */
-persist();
-refreshTop();
-
-</script>
-</body>
-<body>
-  <div id="topbar">
-    <div class="barL">
-      <div class="chip">Build <b>STEP-2</b></div>
-      <div class="chip">Active <b id="uiName">—</b></div>
-      <div class="chip">Lv <b id="uiLevel">—</b></div>
-      <div class="chip">HP <b id="uiHP">—</b></div>
-      <div class="chip">TP <b id="uiTP">—</b></div>
-      <div class="chip">Belt <b id="uiBelt">—</b></div>
-      <div class="chip">🪙 <b id="uiGold">0</b></div>
-      <div class="chip">☯ <b id="uiKarma">0</b></div>
-    </div>
-    <div class="barR">
-      <button class="btn ghost small" id="dailyBtn">Meditate</button>
-      <button class="btn ghost small" id="profilesBtn">Profiles</button>
-      <button class="btn ghost small" id="saveBtn">Save</button>
-      <button class="btn ghost small" id="resetBtn">Reset Slot</button>
-    </div>
-  </div>
-
-  <!-- Town -->
-  <div id="town">
-    <div id="townLayer">
-      <div id="townBg"></div>
-
-      <button class="hotspot" id="hsHospital"><div class="label">Hospital</div></button>
-      <button class="hotspot" id="hsDojo"><div class="label">Dojo</div></button>
-      <button class="hotspot" id="hsDaimyo"><div class="label">Daimyo</div></button>
-      <button class="hotspot" id="hsRelic"><div class="label">Relic Shop</div></button>
-      <button class="hotspot" id="hsWeapon"><div class="label">Weapon Shop</div></button>
-      <button class="hotspot" id="hsRecruit"><div class="label">Recruit</div></button>
-      <button class="hotspot" id="hsFight"><div class="label">Battle</div></button>
-    </div>
-  </div>
-
-  <!-- Battle placeholder -->
-  <div id="battle" class="hidden">
-    <div id="battleBg"></div>
-    <div id="battleOverlay">
-      <div id="battleNote">
-        Step 2 uses a placeholder battle screen to confirm <b>battle.jpg</b> loads.
-        <div style="margin-top:10px">
-          <button class="btn" id="battleBackBtn">BACK</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Dojo Modal -->
-  <div class="modal hidden" id="dojoModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Dojo</h3>
-        <button class="btn ghost small" id="closeDojo">Close</button>
-      </div>
-
-      <div class="tabs">
-        <button class="tab active" id="tabTrain">Training</button>
-        <button class="tab" id="tabNinja">Ninja</button>
-      </div>
-
-      <div class="tabPane" id="paneTrain">
-        <div class="muted">Level = TP spent + 1. Training costs increase at higher stats (soft caps).</div>
-
-        <div class="statGrid">
-          <div class="stat">Strength<br><b id="stSTR">1</b><div class="muted">Cost: <b id="cSTR">1</b> TP</div></div>
-          <div class="stat">Agility<br><b id="stAGI">1</b><div class="muted">Cost: <b id="cAGI">1</b> TP</div></div>
-          <div class="stat">Endurance<br><b id="stEND">1</b><div class="muted">Cost: <b id="cEND">1</b> TP</div></div>
-        </div>
-
-        <div class="row" style="margin-top:10px">
-          <button class="btn primary" id="trainSTR">+ STR</button>
-          <button class="btn primary" id="trainAGI">+ AGI</button>
-          <button class="btn primary" id="trainEND">+ END</button>
-        </div>
-
-        <div class="muted" style="margin-top:10px">
-          TP: <b id="tpHere">0</b> • Active: <b id="activeHere">—</b>
-        </div>
-      </div>
-
-      <div class="tabPane hidden" id="paneNinja">
-        <div class="muted">Stats + equipment. Equip items you own.</div>
-
-        <div id="dojoPreviewWrap">
-          <canvas id="dojoCanvas" width="120" height="120"></canvas>
-          <div style="min-width:200px;flex:1">
-            <div style="font-weight:1000;font-size:14px" id="djName">—</div>
-            <div class="muted" id="djLine">—</div>
-            <div class="muted" id="djBelt">—</div>
-          </div>
-        </div>
-
-        <div class="statGrid">
-          <div class="stat">Base STR/AGI/END<br><b id="djBase">—</b></div>
-          <div class="stat">Equip Bonus<br><b id="djBonus">—</b></div>
-          <div class="stat">Derived ATK/DEF/DODGE<br><b id="djDerived">—</b></div>
-        </div>
-
-        <div class="row" style="margin-top:10px;align-items:flex-end">
-          <div style="flex:1;min-width:220px">
-            <div class="muted" style="margin-bottom:6px">Weapon (owned)</div>
-            <select id="djWeaponSelect" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.18)">
-              <option value="">None</option>
-            </select>
-          </div>
-          <button class="btn primary" id="djEquipWeapon">Equip</button>
-          <button class="btn ghost" id="djUnequipWeapon">Unequip</button>
-        </div>
-
-        <div class="row" style="margin-top:10px;align-items:flex-end">
-          <div style="flex:1;min-width:220px">
-            <div class="muted" style="margin-bottom:6px">Relic (owned)</div>
-            <select id="djRelicSelect" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.18)">
-              <option value="">None</option>
-            </select>
-          </div>
-          <button class="btn primary" id="djEquipRelic">Equip</button>
-          <button class="btn ghost" id="djUnequipRelic">Unequip</button>
-        </div>
-
-        <div class="muted" style="margin-top:10px">
-          Equipped: <b id="djEquipped">—</b>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Daimyo Modal -->
-  <div class="modal hidden" id="daiModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Daimyo</h3>
-        <button class="btn ghost small" id="closeDai">Close</button>
-      </div>
-      <div class="muted">Belt is tied to TP spent (Level = TP spent + 1).</div>
-
-      <div class="statGrid">
-        <div class="stat">Belt<br><b id="dBelt">—</b></div>
-        <div class="stat">Level<br><b id="dLevel">—</b></div>
-        <div class="stat">TP Spent<br><b id="dSpent">—</b></div>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <div class="stat" style="flex:1">Belts: Yellow 5 • Orange 12 • Green 20 • Blue 40 • Brown 60 • Black 80</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recruit Modal -->
-  <div class="modal hidden" id="recruitModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Recruit</h3>
-        <button class="btn ghost small" id="closeRecruit">Close</button>
-      </div>
-
-      <div class="muted">Recruit ninjas to grow your clan. More ninjas = advantage in Step 3 battles.</div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="recruitBtn">Recruit (🪙 <span id="recruitCost">200</span>)</button>
-        <button class="btn ghost" id="setActiveBtn">Set Selected Active</button>
-      </div>
-
-      <div class="list" id="rosterList"></div>
-    </div>
-  </div>
-
-  <!-- Weapon Shop Modal -->
-  <div class="modal hidden" id="weaponModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Weapon Shop</h3>
-        <button class="btn ghost small" id="closeWeapon">Close</button>
-      </div>
-
-      <div class="muted">Weapons cost 🪙 gold. Stronger stat bonuses cost more.</div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="buyWeaponBtn">Buy Selected</button>
-        <button class="btn primary" id="equipWeaponBtn">Equip Selected</button>
-        <button class="btn ghost" id="refreshWeaponBtn">Refresh</button>
-      </div>
-
-      <div class="list" id="weaponList"></div>
-    </div>
-  </div>
-
-  <!-- Relic Shop Modal -->
-  <div class="modal hidden" id="relicModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Relic Shop</h3>
-        <button class="btn ghost small" id="closeRelic">Close</button>
-      </div>
-
-      <div class="muted">Relics cost ☯ karma. They add smaller but useful bonuses.</div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn ghost" id="buyRelicBtn">Buy Selected</button>
-        <button class="btn primary" id="equipRelicBtn">Equip Selected</button>
-        <button class="btn ghost" id="refreshRelicBtn">Refresh</button>
-      </div>
-
-      <div class="list" id="relicList"></div>
-    </div>
-  </div>
-
-  <!-- Battle Select Modal -->
-  <div class="modal hidden" id="battleSelectModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Choose Battle</h3>
-        <button class="btn ghost small" id="closeBattleSelect">Close</button>
-      </div>
-      <div class="muted">Pick an enemy clan. Step 3 adds the real battle engine + animations.</div>
-      <div class="list" id="battleList"></div>
-    </div>
-  </div>
-
-  <!-- Profiles Modal -->
-  <div class="modal hidden" id="profilesModal">
-    <div class="card">
-      <div class="row sp">
-        <h3 class="title">Profiles</h3>
-        <button class="btn ghost small" id="closeProfiles">Close</button>
-      </div>
-      <div class="muted">3 save slots. Switch anytime. Each slot saves its own clan.</div>
+      <div class="muted">3 save slots. You can view other slots (read-only summary) and load them.</div>
       <div class="list" id="profilesList"></div>
     </div>
   </div>
 
   <script>
 /* ======================================================
-   STEP 2 — FULL TOWN LOOP
+   NINJA CLAN RPG — FULL SINGLE-FILE GAME
+   Paste-safe: delivered in 5 parts.
 ====================================================== */
-const PROFILE_KEY="ninja_rebuild_profiles_step2_v2";
+
+const PROFILE_KEY="ninja_clan_full_v1";
+
+/* ---------- Utils ---------- */
 const $ = (id)=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
 const rint=(a,b)=>Math.floor(rand(a,b+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const uid=(p)=>`${p}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+const nowMs=()=>Date.now();
 
+/* (more JS continues in Part 2) */
+<!-- PART 1/5 END -->
+<!-- PART 2/5 START -->
 /* ---------- Belt system (TP spent) ---------- */
 const BELTS=["White","Yellow","Orange","Green","Blue","Brown","Black"];
 const BELT_TP={White:0,Yellow:5,Orange:12,Green:20,Blue:40,Brown:60,Black:80};
@@ -1322,26 +515,64 @@ function trainCost(statVal){
   return 1;
 }
 
-/* ---------- Items ---------- */
+/* ---------- Weapons: distinct stats + cost scaling ----------
+   Best: +15 STR +15 AGI +5 END (Legendary)
+   Goes down from there with cost
+----------------------------------------------------------- */
 const WEAPON_TIERS=[
-  {rar:"Common",str:2,agi:1,end:0,cost:60},
-  {rar:"Uncommon",str:4,agi:3,end:1,cost:140},
-  {rar:"Rare",str:7,agi:6,end:2,cost:320},
-  {rar:"Epic",str:10,agi:10,end:3,cost:650},
-  {rar:"Legendary",str:15,agi:15,end:5,cost:1200}
+  {rar:"Common",    str:2,  agi:1,  end:0, cost:60},
+  {rar:"Uncommon",  str:4,  agi:3,  end:1, cost:140},
+  {rar:"Rare",      str:7,  agi:6,  end:2, cost:320},
+  {rar:"Epic",      str:10, agi:10, end:3, cost:650},
+  {rar:"Legendary", str:15, agi:15, end:5, cost:1200},
 ];
-const WEAPON_NAMES=["Katana","Tanto","Naginata","War Fan","Iron Staff","Moon Blade","Storm Edge"];
-const RELIC_NAMES=["Focus Charm","Shadow Bead","Lotus Token","Phoenix Feather","Smoke Ring","Karma Bead"];
+
+const WEAPON_CATALOG=[
+  {name:"Katana",      art:"katana"},
+  {name:"Tanto",       art:"tanto"},
+  {name:"Naginata",    art:"naginata"},
+  {name:"War Fan",     art:"fan"},
+  {name:"Iron Staff",  art:"staff"},
+  {name:"Moon Blade",  art:"moon"},
+  {name:"Storm Edge",  art:"storm"},
+  {name:"Kunai Chain", art:"chain"},
+];
+
+const RELIC_CATALOG=[
+  "Focus Charm","Shadow Bead","Lotus Token","Phoenix Feather","Smoke Ring","Karma Bead",
+  "River Stone","Silent Bell","Old Coin","Wind Talisman"
+];
 
 function makeWeapon(){
   const t=WEAPON_TIERS[rint(0,WEAPON_TIERS.length-1)];
-  return {id:uid("w"),type:"weapon",rarity:t.rar,name:pick(WEAPON_NAMES),bonus:{str:t.str,agi:t.agi,end:t.end},cost:t.cost};
+  const base=pick(WEAPON_CATALOG);
+  // Slight variability while keeping tier identity (still "all different")
+  const wiggle = (v, maxDown=0, maxUp=0)=> clamp(v + rint(-maxDown, maxUp), 0, 99);
+  const bonus={
+    str: wiggle(t.str, 1, 1),
+    agi: wiggle(t.agi, 1, 1),
+    end: wiggle(t.end, 0, 1),
+  };
+  // cost rises with total stats (keeps "more stats cost more gold")
+  const power = bonus.str*2 + bonus.agi*2 + bonus.end*3;
+  const cost  = Math.max(t.cost, 40 + power*18);
+  return {
+    id:uid("w"),
+    type:"weapon",
+    rarity:t.rar,
+    name:base.name,
+    art:base.art,
+    bonus,
+    cost
+  };
 }
+
 function makeRelic(){
-  const bonus={str:rint(0,2),agi:rint(1,3),end:rint(1,3)};
-  const power=bonus.str*2 + bonus.agi*2 + bonus.end*2;
-  const cost=80 + power*35;
-  return {id:uid("r"),type:"relic",rarity:power>=14?"Epic":power>=10?"Rare":power>=7?"Uncommon":"Common",name:pick(RELIC_NAMES),bonus,cost};
+  const bonus={str:rint(0,2), agi:rint(0,3), end:rint(0,3)};
+  const power = bonus.str*2 + bonus.agi*2 + bonus.end*2;
+  const cost  = 60 + power*35;
+  const rarity = power>=14?"Epic":power>=10?"Rare":power>=7?"Uncommon":"Common";
+  return {id:uid("r"), type:"relic", rarity, name:pick(RELIC_CATALOG), bonus, cost};
 }
 
 /* ---------- Save data ---------- */
@@ -1356,9 +587,11 @@ function makeNinja(name=null){
     base:{str:1,agi:1,end:1},
     equip:{weaponId:null,relicId:null},
     hp:60,maxHP:60,
-    derived:{}
+    derived:{},
+    status:{}, // battle temps
   };
 }
+
 function defaultSlot(){
   const starter=makeNinja("Starter Ninja");
   starter.tp=10;
@@ -1367,38 +600,42 @@ function defaultSlot(){
     daily:{lastClaim:0},
     ninjas:[starter],
     activeId:starter.id,
-    inventory:{weapons:[],relics:[]},
-    shop:{weapons:[],relics:[]}
+    inventory:{weapons:[], relics:[]},
+    shop:{weapons:[], relics:[]},
+    meta:{wins:0, losses:0}
   };
 }
 
-let profiles = loadProfiles();
+/* ---------- Profiles (save slots + view other accounts) ---------- */
 function loadProfiles(){
   try{
     const raw=localStorage.getItem(PROFILE_KEY);
-    if(!raw) return {active:"slot1",slots:{slot1:defaultSlot(),slot2:null,slot3:null}};
+    if(!raw) return {active:"slot1", slots:{slot1:defaultSlot(), slot2:null, slot3:null}};
     const p=JSON.parse(raw);
     p.active ??= "slot1";
     p.slots ??= {slot1:null,slot2:null,slot3:null};
     if(!p.slots.slot1) p.slots.slot1=defaultSlot();
     return p;
   }catch{
-    return {active:"slot1",slots:{slot1:defaultSlot(),slot2:null,slot3:null}};
+    return {active:"slot1", slots:{slot1:defaultSlot(), slot2:null, slot3:null}};
   }
 }
-function persistProfiles(){ localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles)); }
-
+let profiles = loadProfiles();
 let save = profiles.slots[profiles.active];
+
+function persistProfiles(){ localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles)); }
 function persist(){
   profiles.slots[profiles.active]=save;
   persistProfiles();
 }
 
+/* ---------- Accessors ---------- */
 function activeNinja(){
   return save.ninjas.find(n=>n.id===save.activeId) || save.ninjas[0];
 }
 function invWeapon(id){ return save.inventory.weapons.find(w=>w.id===id)||null; }
 function invRelic(id){ return save.inventory.relics.find(r=>r.id===id)||null; }
+
 function equipBonus(n){
   const w=n.equip.weaponId?invWeapon(n.equip.weaponId):null;
   const r=n.equip.relicId?invRelic(n.equip.relicId):null;
@@ -1406,9 +643,11 @@ function equipBonus(n){
     str:(w?.bonus.str||0)+(r?.bonus.str||0),
     agi:(w?.bonus.agi||0)+(r?.bonus.agi||0),
     end:(w?.bonus.end||0)+(r?.bonus.end||0),
-    weapon:w, relic:r
+    weapon:w,
+    relic:r
   };
 }
+
 function recalc(n){
   const eq=equipBonus(n);
   const STR=n.base.str+eq.str;
@@ -1425,9 +664,11 @@ function recalc(n){
     STR,AGI,END,
     atk: Math.floor(6 + STR*3 + n.level*1.2),
     def: Math.floor(END + n.level*0.6),
-    dodge: clamp(0.03 + AGI*0.015, 0.03, 0.30)
+    dodge: clamp(0.03 + AGI*0.015, 0.03, 0.30),
+    crit:  clamp(0.04 + AGI*0.008, 0.04, 0.22),
   };
 }
+
 /* ---------- Modal helpers ---------- */
 function openModal(id){ $(id).classList.remove("hidden"); }
 function closeModal(id){ $(id).classList.add("hidden"); }
@@ -1448,6 +689,29 @@ function refreshTop(){
   $("uiKarma").textContent=save.currency.karma;
 }
 
+/* ---------- Shops stock ---------- */
+let weaponSelectedId=null, relicSelectedId=null;
+
+function ensureWeaponStock(){
+  if(!save.shop.weapons?.length){
+    save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
+  }
+}
+function ensureRelicStock(){
+  if(!save.shop.relics?.length){
+    save.shop.relics = Array.from({length:6}, ()=>makeRelic());
+  }
+}
+
+/* (battle engine + rendering continues in Part 3) */
+<!-- PART 2/5 END -->
+<!-- PART 3/5 START -->
+/* ======================================================
+   PART 3 — SHOP UI + DOJO UI + DAILY + BATTLE ENGINE (multi-ninja)
+   Includes: weapon/relic shop internals, dojo training, equip, and the
+   real battle loop (all your owned ninjas fight at once) + variable enemy clan sizes.
+====================================================== */
+
 /* ---------- Dojo tabs ---------- */
 function setDojoTab(which){
   $("tabTrain").classList.toggle("active", which==="train");
@@ -1461,6 +725,7 @@ $("tabTrain").onclick=()=>setDojoTab("train");
 $("tabNinja").onclick=()=>setDojoTab("ninja");
 $("closeDojo").onclick=()=>closeModal("dojoModal");
 
+/* ---------- Training ---------- */
 function renderDojoTraining(){
   const a=activeNinja(); recalc(a);
   $("activeHere").textContent=a.name;
@@ -1486,7 +751,7 @@ function spendTP(stat){
   const cost=trainCost(a.base[stat]);
   if(a.tp<cost) return;
   a.tp-=cost;
-  a.base[stat] += 1;
+  a.base[stat]+=1;
   recalc(a);
   persist(); refreshTop();
   renderDojoTraining();
@@ -1496,9 +761,10 @@ $("trainSTR").onclick=()=>spendTP("str");
 $("trainAGI").onclick=()=>spendTP("agi");
 $("trainEND").onclick=()=>spendTP("end");
 
-/* ---------- Dojo ninja preview (belt + simple arms) ---------- */
+/* ---------- Dojo preview drawing (arms + weapon silhouette) ---------- */
 function roundRect(ctx,x,y,w,h,r,fill=true){
   const rr=Math.min(r,w/2,h/2);
+  ctx.showPath??=(()=>{});
   ctx.beginPath();
   ctx.moveTo(x+rr,y);
   ctx.arcTo(x+w,y, x+w,y+h, rr);
@@ -1508,6 +774,40 @@ function roundRect(ctx,x,y,w,h,r,fill=true){
   ctx.closePath();
   if(fill) ctx.fill();
 }
+
+function drawWeaponSilhouette(ctx, kind){
+  ctx.save();
+  ctx.strokeStyle="rgba(255,255,255,.75)";
+  ctx.lineWidth=3;
+  ctx.lineCap="round";
+  ctx.lineJoin="round";
+
+  if(kind==="katana" || kind==="storm" || kind==="moon"){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(18,-20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6,-6); ctx.lineTo(10,-10); ctx.stroke();
+  }else if(kind==="tanto"){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(10,-10); ctx.stroke();
+  }else if(kind==="naginata"){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(10,-12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(18,-24); ctx.stroke();
+  }else if(kind==="staff"){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(20,-24); ctx.stroke();
+  }else if(kind==="fan"){
+    ctx.beginPath(); ctx.arc(0,0,10,Math.PI*1.2,Math.PI*1.8); ctx.stroke();
+  }else if(kind==="chain"){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(14,-12); ctx.stroke();
+    for(let i=0;i<4;i++){
+      ctx.beginPath();
+      ctx.arc(14+i*4,-12-i*3,2,0,Math.PI*2);
+      ctx.stroke();
+    }
+  }else{
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(16,-18); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawDojoPreview(){
   const c=$("dojoCanvas");
   const ctx=c.getContext("2d");
@@ -1525,7 +825,7 @@ function drawDojoPreview(){
   ctx.fillStyle="#111";
   ctx.beginPath(); ctx.arc(0,-38,16,0,Math.PI*2); ctx.fill();
 
-  // mask strip
+  // face strip
   ctx.fillStyle="#f3d6b6";
   roundRect(ctx,-12,-44,24,10,5,true);
   ctx.fillStyle="#111"; ctx.fillRect(-10,-40,20,3);
@@ -1534,7 +834,7 @@ function drawDojoPreview(){
   ctx.fillStyle="#111";
   roundRect(ctx,-18,-26,36,36,12,true);
 
-  // arms (simple)
+  // arms
   ctx.strokeStyle="#111";
   ctx.lineWidth=6;
   ctx.lineCap="round";
@@ -1550,16 +850,19 @@ function drawDojoPreview(){
   roundRect(ctx,-16,10,14,12,6,true);
   roundRect(ctx,  2,10,14,12,6,true);
 
-  // weapon hint
-  ctx.strokeStyle = eq.weapon ? "#cfd2d6" : "rgba(255,255,255,.25)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(26,-10);
-  ctx.lineTo(42,-28);
-  ctx.stroke();
+  // weapon in right hand
+  ctx.translate(34,-8);
+  if(eq.weapon){
+    drawWeaponSilhouette(ctx, eq.weapon.art);
+  }else{
+    ctx.strokeStyle="rgba(255,255,255,.25)";
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(14,-14); ctx.stroke();
+  }
 
   ctx.restore();
 }
+
 function renderDojoNinja(){
   const a=activeNinja(); recalc(a);
   const eq=equipBonus(a);
@@ -1680,7 +983,7 @@ $("recruitBtn").onclick=()=>{
 
   save.currency.gold -= cost;
   const n=makeNinja();
-  n.tp = 0; // recruits start with 0 TP (can change later)
+  n.tp = 0;
   recalc(n);
   save.ninjas.push(n);
   rosterSelectedId=n.id;
@@ -1692,20 +995,846 @@ $("setActiveBtn").onclick=()=>{
   save.activeId=rosterSelectedId;
   persist(); refreshTop(); renderRoster();
 };
-/* ---------- Shops ---------- */
+
+/* ---------- Weapon Shop UI ---------- */
+function renderWeaponShop(){
+  ensureWeaponStock();
+  const list=$("weaponList"); list.innerHTML="";
+
+  for(const w of save.shop.weapons){
+    const selected = w.id===weaponSelectedId;
+    const owned = save.inventory.weapons.some(x=>x.id===w.id);
+
+    const row=document.createElement("div");
+    row.className="item";
+    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
+    row.innerHTML=`
+      <div style="min-width:0">
+        <div style="font-weight:1000">
+          ${w.name} <span class="pill rar ${w.rarity}">${w.rarity}</span>
+          <span class="pill">🪙 ${Math.round(w.cost)}</span> ${owned?`<span class="pill">OWNED</span>`:""}
+        </div>
+        <div class="muted">+STR ${w.bonus.str} • +AGI ${w.bonus.agi} • +END ${w.bonus.end}</div>
+      </div>
+      <button class="btn ghost small" data-wsel="${w.id}">${selected?"Selected":"Select"}</button>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("button[data-wsel]").forEach(b=>{
+    b.onclick=()=>{ weaponSelectedId=b.getAttribute("data-wsel"); renderWeaponShop(); };
+  });
+
+  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
+  $("buyWeaponBtn").disabled = !sel || save.currency.gold < sel.cost || save.inventory.weapons.some(x=>x.id===sel.id);
+  $("equipWeaponBtn").disabled = !sel || (!save.inventory.weapons.some(x=>x.id===sel.id) && save.currency.gold < sel.cost);
+}
+
+$("buyWeaponBtn").onclick=()=>{
+  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
+  if(!sel) return;
+  if(save.currency.gold < sel.cost) return;
+  if(save.inventory.weapons.some(x=>x.id===sel.id)) return;
+  save.currency.gold -= Math.round(sel.cost);
+  save.inventory.weapons.push(sel);
+  persist(); refreshTop();
+  renderWeaponShop();
+  renderDojoNinja();
+};
+
+$("equipWeaponBtn").onclick=()=>{
+  const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
+  if(!sel) return;
+
+  if(!save.inventory.weapons.some(x=>x.id===sel.id)){
+    if(save.currency.gold < sel.cost) return;
+    save.currency.gold -= Math.round(sel.cost);
+    save.inventory.weapons.push(sel);
+  }
+  const a=activeNinja();
+  a.equip.weaponId=sel.id;
+  recalc(a);
+  persist(); refreshTop();
+  renderWeaponShop();
+  renderDojoNinja();
+};
+
+$("refreshWeaponBtn").onclick=()=>{
+  save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
+  weaponSelectedId = save.shop.weapons[0]?.id || null;
+  persist();
+  renderWeaponShop();
+};
+
+$("closeWeapon").onclick=()=>closeModal("weaponModal");
+
+/* ---------- Relic Shop UI ---------- */
+function renderRelicShop(){
+  ensureRelicStock();
+  const list=$("relicList"); list.innerHTML="";
+
+  for(const r of save.shop.relics){
+    const selected = r.id===relicSelectedId;
+    const owned = save.inventory.relics.some(x=>x.id===r.id);
+
+    const row=document.createElement("div");
+    row.className="item";
+    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
+    row.innerHTML=`
+      <div style="min-width:0">
+        <div style="font-weight:1000">
+          ${r.name} <span class="pill rar ${r.rarity}">${r.rarity}</span>
+          <span class="pill">☯ ${Math.round(r.cost)}</span> ${owned?`<span class="pill">OWNED</span>`:""}
+        </div>
+        <div class="muted">+STR ${r.bonus.str} • +AGI ${r.bonus.agi} • +END ${r.bonus.end}</div>
+      </div>
+      <button class="btn ghost small" data-rsel="${r.id}">${selected?"Selected":"Select"}</button>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("button[data-rsel]").forEach(b=>{
+    b.onclick=()=>{ relicSelectedId=b.getAttribute("data-rsel"); renderRelicShop(); };
+  });
+
+  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
+  $("buyRelicBtn").disabled = !sel || save.currency.karma < sel.cost || save.inventory.relics.some(x=>x.id===sel.id);
+  $("equipRelicBtn").disabled = !sel || (!save.inventory.relics.some(x=>x.id===sel.id) && save.currency.karma < sel.cost);
+}
+
+$("buyRelicBtn").onclick=()=>{
+  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
+  if(!sel) return;
+  if(save.currency.karma < sel.cost) return;
+  if(save.inventory.relics.some(x=>x.id===sel.id)) return;
+  save.currency.karma -= Math.round(sel.cost);
+  save.inventory.relics.push(sel);
+  persist(); refreshTop();
+  renderRelicShop();
+  renderDojoNinja();
+};
+
+$("equipRelicBtn").onclick=()=>{
+  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
+  if(!sel) return;
+
+  if(!save.inventory.relics.some(x=>x.id===sel.id)){
+    if(save.currency.karma < sel.cost) return;
+    save.currency.karma -= Math.round(sel.cost);
+    save.inventory.relics.push(sel);
+  }
+  const a=activeNinja();
+  a.equip.relicId=sel.id;
+  recalc(a);
+  persist(); refreshTop();
+  renderRelicShop();
+  renderDojoNinja();
+};
+
+$("refreshRelicBtn").onclick=()=>{
+  save.shop.relics = Array.from({length:6}, ()=>makeRelic());
+  relicSelectedId = save.shop.relics[0]?.id || null;
+  persist();
+  renderRelicShop();
+};
+$("closeRelic").onclick=()=>closeModal("relicModal");
+
+/* ---------- Profiles modal ---------- */
+$("closeProfiles").onclick=()=>closeModal("profilesModal");
+
+function slotSummary(slot){
+  if(!slot) return "Empty slot";
+  const a = slot.ninjas?.[0];
+  if(!a) return "Empty slot";
+  const spent = (a.base?.str-1||0)+(a.base?.agi-1||0)+(a.base?.end-1||0);
+  const belt = beltFromSpent(spent);
+  return `${slot.ninjas.length} ninjas • ${belt} • 🪙${slot.currency.gold} • ☯${slot.currency.karma}`;
+}
+
+function renderProfiles(){
+  const list=$("profilesList");
+  list.innerHTML="";
+
+  for(const sname of ["slot1","slot2","slot3"]){
+    const slot = profiles.slots[sname];
+    const isActive = profiles.active===sname;
+
+    const row=document.createElement("div");
+    row.className="item";
+    row.innerHTML=`
+      <div>
+        <div style="font-weight:1000">${sname.toUpperCase()} ${isActive?`<span class="pill">ACTIVE</span>`:""}</div>
+        <div class="muted">${slotSummary(slot)}</div>
+      </div>
+      <div class="row">
+        <button class="btn ghost small" data-load="${sname}">Load</button>
+        <button class="btn ghost small" data-new="${sname}">${slot?"Reset":"Create"}</button>
+      </div>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("button[data-load]").forEach(b=>{
+    b.onclick=()=>{
+      const sn=b.getAttribute("data-load");
+      if(!profiles.slots[sn]) return;
+      profiles.active=sn;
+      save=profiles.slots[sn];
+      persistProfiles();
+      refreshTop();
+      closeModal("profilesModal");
+    };
+  });
+
+  list.querySelectorAll("button[data-new]").forEach(b=>{
+    b.onclick=()=>{
+      const sn=b.getAttribute("data-new");
+      profiles.slots[sn]=defaultSlot();
+      profiles.active=sn;
+      save=profiles.slots[sn];
+      persistProfiles();
+      refreshTop();
+      closeModal("profilesModal");
+    };
+  });
+}
+
+/* ---------- Daily meditation (30 min TP reward) ---------- */
+$("dailyBtn").onclick=()=>{
+  const now=Date.now();
+  const last=save.daily?.lastClaim||0;
+  const cd=30*60*1000;
+  if(now-last < cd){
+    const mins=Math.ceil((cd-(now-last))/60000);
+    alert(`Come back in ${mins} min`);
+    return;
+  }
+  const a=activeNinja();
+  a.tp += 3;
+  save.daily.lastClaim = now;
+  persist(); refreshTop();
+  alert("+3 TP!");
+};
+
+/* ======================================================
+   BATTLE ENGINE — multi-ninja vs variable enemy clan sizes
+   - Your entire owned roster fights each battle (alive ones)
+   - Enemy clan size varies by selection & can exceed yours
+   - Includes Boss fight: 1 max-level Black Belt style ninja
+====================================================== */
+
+let battleState=null;
+
+function makeEnemyNinja(template){
+  const n=makeNinja(template?.name||null);
+  // enemy has no TP; we directly set base stats
+  n.tp=0;
+  n.base.str=template.str;
+  n.base.agi=template.agi;
+  n.base.end=template.end;
+  n.equip.weaponId=null;
+  n.equip.relicId=null;
+  n.hp = null;
+  recalc(n);
+  n.hp=n.maxHP;
+  n.isEnemy=true;
+  return n;
+}
+
+function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 40); }
+
+function genEnemyClan(difficulty){
+  // variable sizes by difficulty + randomness
+  // (having more ninjas is advantageous)
+  const yourCount = save.ninjas.length;
+  const base =
+    difficulty==="easy" ? rint(2,4) :
+    difficulty==="medium" ? rint(3,5) :
+    difficulty==="hard" ? rint(4,7) :
+    rint(1,1);
+
+  const size =
+    difficulty==="boss" ? 1 :
+    clamp(base + rint(-1,1) + Math.floor(yourCount*0.25), 1, 10);
+
+  // enemy stats scale with your average level
+  const avgLv = Math.max(1, Math.round(save.ninjas.reduce((s,n)=>{recalc(n);return s+n.level;},0)/save.ninjas.length));
+  const statBase =
+    difficulty==="easy" ? avgLv*0.65 :
+    difficulty==="medium" ? avgLv*0.85 :
+    difficulty==="hard" ? avgLv*1.05 :
+    avgLv*1.15;
+
+  const clan=[];
+  for(let i=0;i<size;i++){
+    const spread = [
+      1.0+rand(-0.15,0.25),
+      1.0+rand(-0.15,0.25),
+      1.0+rand(-0.15,0.25),
+    ];
+    const sum = spread[0]+spread[1]+spread[2];
+    const s = clampEnemyStat((statBase*3)*(spread[0]/sum));
+    const a = clampEnemyStat((statBase*3)*(spread[1]/sum));
+    const e = clampEnemyStat((statBase*3)*(spread[2]/sum));
+    clan.push(makeEnemyNinja({str:s, agi:a, end:e}));
+  }
+
+  return clan;
+}
+
+function makeBossEnemy(){
+  // 1 max level black belt ninja with even spread stats that would be possible
+  // Black belt threshold: spent>=80 => level>=81 (since level = spent + 1)
+  // Even spread of spent: base stats = 1 + floor(80/3)=27 (approx), remaining distributed
+  const spent=80;
+  const each=Math.floor(spent/3); // 26
+  const rem=spent - each*3; // 2
+  const baseStr=1+each + (rem>0?1:0);
+  const baseAgi=1+each + (rem>1?1:0);
+  const baseEnd=1+each;
+  const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd});
+  // Give boss a "virtual legendary" weapon effect baked into stats
+  boss.base.str += 6; boss.base.agi += 6; boss.base.end += 2;
+  recalc(boss); boss.hp=boss.maxHP;
+  boss.isBoss=true;
+  return [boss];
+}
+
+function battleTeamYour(){
+  // all owned ninjas join; if hp missing, reset to full
+  return save.ninjas.map(n=>{
+    recalc(n);
+    n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
+    n.isEnemy=false;
+    return n;
+  });
+}
+
+function living(team){ return team.filter(n=>n.hp>0); }
+function pickTarget(team){ const alive=living(team); return alive.length?pick(alive):null; }
+
+function rollHit(att, def){
+  const dodge = def.derived.dodge;
+  if(Math.random() < dodge) return {hit:false, crit:false};
+  const crit = Math.random() < (att.derived.crit||0.08);
+  return {hit:true, crit};
+}
+
+function dealDamage(att, def, mult=1){
+  const base = att.derived.atk;
+  const mitigation = 1 - clamp(def.derived.def/(def.derived.def+50), 0.15, 0.65);
+  let dmg = Math.max(1, Math.floor(base * mitigation * mult));
+  const r = rollHit(att, def);
+  if(!r.hit) return {dmg:0, dodged:true, crit:false};
+  if(r.crit){ dmg = Math.floor(dmg*1.55); }
+  def.hp = clamp(def.hp - dmg, 0, def.maxHP);
+  return {dmg, dodged:false, crit:r.crit};
+}
+
+function battleLogPush(line){
+  if(!battleState) return;
+  battleState.log.push(line);
+  if(battleState.log.length>120) battleState.log.shift();
+}
+
+function speedScore(n){ return n.derived.AGI + n.level*0.25 + rand(-0.5,0.5); }
+
+function buildTurnOrder(){
+  const all=[...battleState.your, ...battleState.enemy].filter(n=>n.hp>0);
+  all.sort((a,b)=>speedScore(b)-speedScore(a));
+  return all;
+}
+
+function endBattle(victory){
+  battleState.over=true;
+  battleState.victory=victory;
+
+  const rewardGold = victory ? (120 + battleState.enemyStart*35) : 40;
+  const rewardKarma = victory ? (25 + battleState.enemyStart*8) : 10;
+  save.currency.gold += rewardGold;
+  save.currency.karma += rewardKarma;
+
+  if(victory) save.meta.wins=(save.meta.wins||0)+1;
+  else save.meta.losses=(save.meta.losses||0)+1;
+
+  battleLogPush(victory ? `🏁 Victory! Rewards: 🪙${rewardGold}, ☯${rewardKarma}` : `🏁 Defeat… Consolation: 🪙${rewardGold}, ☯${rewardKarma}`);
+  persist(); refreshTop();
+  renderBattleHUD();
+}
+
+function stepBattleRound(){
+  if(!battleState || battleState.over) return;
+
+  const order = buildTurnOrder();
+
+  for(const actor of order){
+    if(battleState.over) break;
+    if(actor.hp<=0) continue;
+
+    const isEnemy = actor.isEnemy;
+    const allies = isEnemy ? battleState.enemy : battleState.your;
+    const foes   = isEnemy ? battleState.your  : battleState.enemy;
+
+    const target = pickTarget(foes);
+    if(!target){
+      endBattle(!isEnemy); // if actor is your team and no enemy => victory
+      break;
+    }
+
+    // Basic attack
+    const mult = 1;
+    const res = dealDamage(actor, target, mult);
+
+    const an = actor.isBoss ? "👹 Boss" : (isEnemy ? "Enemy" : actor.name);
+    const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Your Ninja") : target.name;
+
+    if(res.dodged){
+      battleLogPush(`${an} attacks → ${tn} dodges!`);
+    }else{
+      battleLogPush(`${an} hits ${tn} for ${res.dmg}${res.crit?" (CRIT)":"."}`);
+      if(target.hp<=0){
+        battleLogPush(`💀 ${tn} is down!`);
+      }
+    }
+
+    // Check win/lose after each action
+    if(living(battleState.enemy).length===0){ endBattle(true); break; }
+    if(living(battleState.your).length===0){ endBattle(false); break; }
+  }
+
+  battleState.round++;
+  renderBattleHUD();
+}
+
+function startBattle(kind){
+  // kind: easy/medium/hard/boss
+  const your = battleTeamYour();
+  const enemy = (kind==="boss") ? makeBossEnemy() : genEnemyClan(kind);
+
+  battleState={
+    kind,
+    round:1,
+    over:false,
+    victory:false,
+    your,
+    enemy,
+    enemyStart: enemy.length,
+    log:[`⚔️ Battle start: ${kind.toUpperCase()} — Your clan ${your.length} vs Enemy ${enemy.length}`]
+  };
+
+  // switch screens
+  $("town").classList.add("hidden");
+  $("battle").classList.remove("hidden");
+  renderBattleHUD();
+}
+
+/* ---------- Battle UI: build minimal HUD inside placeholder ---------- */
+function ensureBattleUI(){
+  const note=$("battleNote");
+  if(note.querySelector("#battleHud")) return;
+
+  note.innerHTML = `
+    <div id="battleHud" style="text-align:left">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-weight:1000">Battle</div>
+        <div class="row" style="gap:8px">
+          <button class="btn primary small" id="battleStepBtn">Next Round</button>
+          <button class="btn ghost small" id="battleAutoBtn">Auto x10</button>
+          <button class="btn small" id="battleBackBtn">Back</button>
+        </div>
+      </div>
+
+      <div class="muted" id="battleMeta" style="margin-top:8px"></div>
+
+      <div class="row" style="margin-top:10px;align-items:flex-start">
+        <div style="flex:1;min-width:220px">
+          <div style="font-weight:1000;margin-bottom:6px">Your Clan</div>
+          <div class="list" id="battleYourList"></div>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div style="font-weight:1000;margin-bottom:6px">Enemy Clan</div>
+          <div class="list" id="battleEnemyList"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div style="font-weight:1000;margin-bottom:6px">Log</div>
+        <div class="list" id="battleLog" style="max-height:220px"></div>
+      </div>
+    </div>
+  `;
+
+  note.querySelector("#battleStepBtn").onclick=()=>stepBattleRound();
+  note.querySelector("#battleAutoBtn").onclick=()=>{
+    for(let i=0;i<10;i++){
+      if(!battleState || battleState.over) break;
+      stepBattleRound();
+    }
+  };
+  note.querySelector("#battleBackBtn").onclick=()=>{
+    // leave battle; keep HP as-is (hospital heals)
+    battleState=null;
+    $("battle").classList.add("hidden");
+    $("town").classList.remove("hidden");
+    refreshTop();
+  };
+}
+
+function miniRow(n, labelOverride=null){
+  recalc(n);
+  const label = labelOverride ?? (n.isEnemy ? (n.isBoss?"👹 Boss Ronin":"Enemy") : n.name);
+  const hpPct = Math.round((n.hp/n.maxHP)*100);
+  const dead = n.hp<=0;
+  return `
+    <div class="item" style="${dead?"opacity:.55":""}">
+      <div style="min-width:0">
+        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${label} ${dead?`<span class="pill">DOWN</span>`:""}
+        </div>
+        <div class="muted">HP ${n.hp}/${n.maxHP} (${hpPct}%) • ATK ${n.derived.atk} • DEF ${n.derived.def} • DODGE ${Math.round(n.derived.dodge*100)}%</div>
+      </div>
+      <div class="pill">${n.derived.STR}/${n.derived.AGI}/${n.derived.END}</div>
+    </div>
+  `;
+}
+
+function renderBattleHUD(){
+  ensureBattleUI();
+  if(!battleState) return;
+
+  $("battleMeta").textContent =
+    `Round ${battleState.round} • Your alive: ${living(battleState.your).length}/${battleState.your.length} • ` +
+    `Enemy alive: ${living(battleState.enemy).length}/${battleState.enemy.length}` +
+    (battleState.over ? (battleState.victory ? " • ✅ Victory" : " • ❌ Defeat") : "");
+
+  $("battleYourList").innerHTML = battleState.your.map(n=>miniRow(n)).join("");
+  $("battleEnemyList").innerHTML = battleState.enemy.map(n=>miniRow(n)).join("");
+
+  const logEl=$("battleLog");
+  logEl.innerHTML = battleState.log.map(line=>`<div class="item" style="justify-content:flex-start">${line}</div>`).join("");
+  logEl.scrollTop = logEl.scrollHeight;
+
+  // disable controls if over
+  const stepBtn=document.getElementById("battleStepBtn");
+  const autoBtn=document.getElementById("battleAutoBtn");
+  if(stepBtn) stepBtn.disabled = battleState.over;
+  if(autoBtn) autoBtn.disabled = battleState.over;
+}
+
+/* ---------- Battle select modal (now launches real battles) ---------- */
+$("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
+
+function renderBattleSelect(){
+  const list=$("battleList");
+  list.innerHTML="";
+
+  const options=[
+    {id:"easy",   name:"Scout Clan (Easy)",   desc:"Smaller enemy clan. Good for new ninjas."},
+    {id:"medium", name:"Rival Clan (Medium)", desc:"Balanced clan size + stats."},
+    {id:"hard",   name:"Elite Clan (Hard)",   desc:"Bigger clan + tougher stats."},
+    {id:"boss",   name:"Boss Clan",           desc:"1 powerful Black Belt-style boss."},
+  ];
+
+  for(const o of options){
+    const row=document.createElement("div");
+    row.className="item";
+    row.innerHTML=`
+      <div>
+        <div style="font-weight:1000">${o.name}</div>
+        <div class="muted">${o.desc}</div>
+      </div>
+      <button class="btn primary small" data-battle="${o.id}">Fight</button>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("button[data-battle]").forEach(b=>{
+    b.onclick=()=>{
+      const kind=b.getAttribute("data-battle");
+      closeModal("battleSelectModal");
+      startBattle(kind);
+    };
+  });
+}
+
+/* ---------- Buildings ---------- */
+$("hsHospital").onclick=()=>{
+  const a=activeNinja(); recalc(a);
+  // heal ALL ninjas at hospital (feels better with multi-ninja battles)
+  for(const n of save.ninjas){ recalc(n); n.hp=n.maxHP; }
+  persist(); refreshTop();
+  alert("Healed your whole clan!");
+};
+
+$("hsDojo").onclick=()=>{
+  setDojoTab("train");
+  renderDojoTraining();
+  renderDojoNinja();
+  openModal("dojoModal");
+};
+
+$("hsDaimyo").onclick=()=>{
+  renderDaimyo();
+  openModal("daiModal");
+};
+
+$("hsRecruit").onclick=()=>{
+  rosterSelectedId = save.activeId;
+  renderRoster();
+  openModal("recruitModal");
+};
+
+$("hsWeapon").onclick=()=>{
+  ensureWeaponStock();
+  weaponSelectedId = save.shop.weapons[0]?.id || null;
+  renderWeaponShop();
+  openModal("weaponModal");
+};
+
+$("hsRelic").onclick=()=>{
+  ensureRelicStock();
+  relicSelectedId = save.shop.relics[0]?.id || null;
+  renderRelicShop();
+  openModal("relicModal");
+};
+
+$("hsFight").onclick=()=>{
+  renderBattleSelect();
+  openModal("battleSelectModal");
+};
+
+/* ---------- Top buttons ---------- */
+$("profilesBtn").onclick=()=>{
+  renderProfiles();
+  openModal("profilesModal");
+};
+
+$("saveBtn").onclick=()=>{ persist(); refreshTop(); alert("Saved!"); };
+
+$("resetBtn").onclick=()=>{
+  profiles.slots[profiles.active]=defaultSlot();
+  save=profiles.slots[profiles.active];
+  persistProfiles();
+  refreshTop();
+  alert("Slot reset!");
+};
+
+/* ---------- Init (safe) ---------- */
+try{
+  persist();
+  refreshTop();
+}catch(e){
+  console.error(e);
+  alert("Init error: " + (e?.message||e));
+}
+
+<!-- PART 3/5 END -->
+<!-- PART 4/5 START -->
+/* ======================================================
+   PART 4 — RECRUIT + WEAPON BALANCE + SHOP GENERATION + PROFILES
+   Adds: weapon stat ladder (+15/+15/+5 best), costs scale with total stats,
+         unique weapon looks (art), relic tuning, save slot UX polish,
+         and fixes for common “undefined” crashes.
+====================================================== */
+
+/* ---------- Safety: make sure meta/save keys exist ---------- */
+function ensureSaveIntegrity(){
+  save.meta ??= { wins:0, losses:0 };
+  save.currency ??= { gold:200, karma:50 };
+  save.daily ??= { lastClaim:0 };
+  save.inventory ??= { weapons:[], relics:[] };
+  save.shop ??= { weapons:[], relics:[] };
+  save.ninjas ??= [];
+  if(!save.activeId && save.ninjas[0]) save.activeId = save.ninjas[0].id;
+}
+
+/* ---------- Weapon ladder (best = +15/+15/+5) ---------- */
+const WEAPON_LADDER = [
+  // goes down from best; costs rise with total stats
+  {rar:"Legendary", str:15, agi:15, end:5},
+  {rar:"Epic",      str:12, agi:12, end:4},
+  {rar:"Rare",      str:9,  agi:9,  end:3},
+  {rar:"Uncommon",  str:6,  agi:5,  end:2},
+  {rar:"Common",    str:3,  agi:2,  end:1},
+  {rar:"Common",    str:2,  agi:1,  end:0},
+];
+
+const WEAPON_POOL = [
+  {name:"Katana", art:"katana"},
+  {name:"Tanto", art:"tanto"},
+  {name:"Naginata", art:"naginata"},
+  {name:"War Fan", art:"fan"},
+  {name:"Iron Staff", art:"staff"},
+  {name:"Moon Blade", art:"moon"},
+  {name:"Storm Edge", art:"storm"},
+  {name:"Chain Sickle", art:"chain"},
+];
+
+function weaponCostFromBonus(b){
+  // "more stats cost more gold"
+  const total = b.str + b.agi + b.end;
+  // weighted so END is valuable too
+  const power = (b.str*2.2) + (b.agi*2.2) + (b.end*3.0);
+  // base + nonlinear curve for high totals
+  return Math.round(60 + total*25 + Math.pow(power, 1.15) * 6.5);
+}
+
+function makeWeapon(){
+  const t = WEAPON_LADDER[rint(0, WEAPON_LADDER.length-1)];
+  const base = pick(WEAPON_POOL);
+  const bonus = {str:t.str, agi:t.agi, end:t.end};
+  const cost = weaponCostFromBonus(bonus);
+  return {
+    id:uid("w"),
+    type:"weapon",
+    rarity:t.rar,
+    name:base.name,
+    art:base.art,
+    bonus,
+    cost
+  };
+}
+
+/* ---------- Relics (smaller bonuses, karma cost) ---------- */
+const RELIC_POOL = [
+  {name:"Focus Charm",  tag:"atk"},
+  {name:"Shadow Bead",  tag:"dodge"},
+  {name:"Lotus Token",  tag:"def"},
+  {name:"Phoenix Feather", tag:"hp"},
+  {name:"Smoke Ring",   tag:"dodge"},
+  {name:"Karma Bead",   tag:"atk"},
+];
+
+function relicCostFromBonus(b){
+  const total = b.str + b.agi + b.end;
+  return Math.round(40 + total*18 + Math.pow(total,1.35)*10);
+}
+
+function makeRelic(){
+  const base = pick(RELIC_POOL);
+  // modest relics (usually smaller than weapons)
+  const bonus={str:rint(0,2), agi:rint(0,2), end:rint(0,2)};
+  const total = bonus.str+bonus.agi+bonus.end;
+  const rarity = total>=6 ? "Epic" : total>=4 ? "Rare" : total>=2 ? "Uncommon" : "Common";
+  const cost = relicCostFromBonus(bonus);
+  return {id:uid("r"), type:"relic", rarity, name:base.name, bonus, cost, tag:base.tag};
+}
+
+/* ---------- Ensure stock + refresh helpers ---------- */
 let weaponSelectedId=null, relicSelectedId=null;
 
 function ensureWeaponStock(){
-  if(!save.shop.weapons?.length){
+  ensureSaveIntegrity();
+  if(!Array.isArray(save.shop.weapons) || save.shop.weapons.length===0){
     save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
   }
 }
 function ensureRelicStock(){
-  if(!save.shop.relics?.length){
+  ensureSaveIntegrity();
+  if(!Array.isArray(save.shop.relics) || save.shop.relics.length===0){
     save.shop.relics = Array.from({length:6}, ()=>makeRelic());
   }
 }
 
+/* ---------- Fix: activeNinja must always return something ---------- */
+function activeNinja(){
+  ensureSaveIntegrity();
+  let a = save.ninjas.find(n=>n.id===save.activeId);
+  if(!a && save.ninjas[0]){ a=save.ninjas[0]; save.activeId=a.id; }
+  if(!a){
+    const starter = makeNinja("Starter Ninja");
+    starter.tp=10;
+    save.ninjas=[starter];
+    save.activeId=starter.id;
+    a=starter;
+  }
+  return a;
+}
+
+/* ---------- Recruit tuning (clan size advantage) ---------- */
+function recruitCost(){
+  ensureSaveIntegrity();
+  // grows slowly so building a clan is feasible
+  return Math.round(160 + (save.ninjas.length-1)*120);
+}
+function makeRecruit(){
+  // recruits are weaker at first but can train
+  const n = makeNinja();
+  // give small randomized starting stats
+  n.base.str = 1 + rint(0,2);
+  n.base.agi = 1 + rint(0,2);
+  n.base.end = 1 + rint(0,2);
+  n.tp = 0;
+  n.hp = null;
+  recalc(n);
+  n.hp = n.maxHP;
+  return n;
+}
+
+/* override existing recruit button handler (safe to call multiple times) */
+if($("recruitBtn")){
+  $("recruitBtn").onclick=()=>{
+    ensureSaveIntegrity();
+    const cost=recruitCost();
+    if(save.currency.gold < cost) return;
+    save.currency.gold -= cost;
+
+    const n = makeRecruit();
+    save.ninjas.push(n);
+    rosterSelectedId = n.id;
+
+    persist(); refreshTop();
+    renderRoster();
+  };
+}
+
+/* ---------- Roster UI needs updated cost display ---------- */
+function renderRoster(){
+  ensureSaveIntegrity();
+  const cost=recruitCost();
+  $("recruitCost").textContent=cost;
+  $("recruitBtn").disabled = save.currency.gold < cost;
+
+  const list=$("rosterList");
+  list.innerHTML="";
+
+  for(const n of save.ninjas){
+    recalc(n);
+    const isActive = n.id===save.activeId;
+    const selected = n.id===rosterSelectedId;
+
+    const row=document.createElement("div");
+    row.className="item";
+    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
+    row.innerHTML=`
+      <div style="min-width:0">
+        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${n.name} <span class="pill">Lv${n.level}</span> ${isActive?`<span class="pill">ACTIVE</span>`:""}
+        </div>
+        <div class="muted">STR ${n.derived.STR} • AGI ${n.derived.AGI} • END ${n.derived.END} • HP ${n.hp}/${n.maxHP}</div>
+      </div>
+      <button class="btn ghost small" data-sel="${n.id}">${selected?"Selected":"Select"}</button>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("button[data-sel]").forEach(btn=>{
+    btn.onclick=()=>{ rosterSelectedId=btn.getAttribute("data-sel"); renderRoster(); };
+  });
+
+  $("setActiveBtn").disabled = !rosterSelectedId;
+}
+
+/* keep set active */
+if($("setActiveBtn")){
+  $("setActiveBtn").onclick=()=>{
+    if(!rosterSelectedId) return;
+    save.activeId=rosterSelectedId;
+    persist(); refreshTop(); renderRoster();
+  };
+}
+
+/* ---------- Shops: re-render uses new weapon/relic objects ---------- */
 function renderWeaponShop(){
   ensureWeaponStock();
   const list=$("weaponList"); list.innerHTML="";
@@ -1772,6 +1901,7 @@ function renderRelicShop(){
   $("equipRelicBtn").disabled = !sel || (!save.inventory.relics.some(x=>x.id===sel.id) && save.currency.karma < sel.cost);
 }
 
+/* ---------- Buy/equip handlers (idempotent) ---------- */
 $("buyWeaponBtn").onclick=()=>{
   const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
   if(!sel) return;
@@ -1780,9 +1910,9 @@ $("buyWeaponBtn").onclick=()=>{
   save.currency.gold -= sel.cost;
   save.inventory.weapons.push(sel);
   persist(); refreshTop();
-  renderWeaponShop();
-  renderDojoNinja();
+  renderWeaponShop(); renderDojoNinja();
 };
+
 $("equipWeaponBtn").onclick=()=>{
   const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
   if(!sel) return;
@@ -1796,16 +1926,15 @@ $("equipWeaponBtn").onclick=()=>{
   a.equip.weaponId=sel.id;
   recalc(a);
   persist(); refreshTop();
-  renderWeaponShop();
-  renderDojoNinja();
+  renderWeaponShop(); renderDojoNinja();
 };
+
 $("refreshWeaponBtn").onclick=()=>{
   save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
   weaponSelectedId = save.shop.weapons[0]?.id || null;
   persist();
   renderWeaponShop();
 };
-$("closeWeapon").onclick=()=>closeModal("weaponModal");
 
 $("buyRelicBtn").onclick=()=>{
   const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
@@ -1815,9 +1944,9 @@ $("buyRelicBtn").onclick=()=>{
   save.currency.karma -= sel.cost;
   save.inventory.relics.push(sel);
   persist(); refreshTop();
-  renderRelicShop();
-  renderDojoNinja();
+  renderRelicShop(); renderDojoNinja();
 };
+
 $("equipRelicBtn").onclick=()=>{
   const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
   if(!sel) return;
@@ -1831,28 +1960,17 @@ $("equipRelicBtn").onclick=()=>{
   a.equip.relicId=sel.id;
   recalc(a);
   persist(); refreshTop();
-  renderRelicShop();
-  renderDojoNinja();
+  renderRelicShop(); renderDojoNinja();
 };
+
 $("refreshRelicBtn").onclick=()=>{
   save.shop.relics = Array.from({length:6}, ()=>makeRelic());
   relicSelectedId = save.shop.relics[0]?.id || null;
   persist();
   renderRelicShop();
 };
-$("closeRelic").onclick=()=>closeModal("relicModal");
 
-/* ---------- Profiles ---------- */
-$("closeProfiles").onclick=()=>closeModal("profilesModal");
-
-function slotSummary(slot){
-  if(!slot) return "Empty slot";
-  const a = slot.ninjas?.[0];
-  if(!a) return "Empty slot";
-  const spent = (a.base?.str-1||0)+(a.base?.agi-1||0)+(a.base?.end-1||0);
-  const belt = beltFromSpent(spent);
-  return `${slot.ninjas.length} ninjas • ${belt} • 🪙${slot.currency.gold} • ☯${slot.currency.karma}`;
-}
+/* ---------- Profile loading must re-bind safely ---------- */
 function renderProfiles(){
   const list=$("profilesList");
   list.innerHTML="";
@@ -1882,6 +2000,7 @@ function renderProfiles(){
       if(!profiles.slots[sn]) return;
       profiles.active=sn;
       save=profiles.slots[sn];
+      ensureSaveIntegrity();
       persistProfiles();
       refreshTop();
       closeModal("profilesModal");
@@ -1894,6 +2013,7 @@ function renderProfiles(){
       profiles.slots[sn]=defaultSlot();
       profiles.active=sn;
       save=profiles.slots[sn];
+      ensureSaveIntegrity();
       persistProfiles();
       refreshTop();
       closeModal("profilesModal");
@@ -1901,7 +2021,455 @@ function renderProfiles(){
   });
 }
 
-/* ---------- Daily meditation (30 min TP reward) ---------- */
+/* ---------- Re-run integrity on init and after profile changes ---------- */
+ensureSaveIntegrity();
+
+/* If user opens shops after this part is applied, stock will be correct. */
+
+/* ======================================================
+   END PART 4
+====================================================== */
+<!-- PART 4/5 END -->
+<!-- PART 5/5 START -->
+/* ======================================================
+   PART 5 — FULL BATTLE ENGINE (ALL OWNED NINJAS) + ENEMY CLAN SIZE VARIANCE + BOSS
+   Adds: real battle loop, multi-ninja advantage, enemy clan generator with variable sizes,
+         battle selection modal actually starts a fight, rewards (gold/karma),
+         boss battle (1 max-level black belt ninja with even stats),
+         and battle UI + log.
+====================================================== */
+
+/* ---------- Battle UI (inject if missing) ---------- */
+(function ensureBattleUI(){
+  // If your HTML already has #battle placeholder, we reuse it; we add a log + buttons inside battleNote.
+  const note = $("battleNote");
+  if(!note) return;
+
+  if(!$("battleTitle")){
+    const wrap=document.createElement("div");
+    wrap.innerHTML=`
+      <div id="battleTitle" style="font-weight:1000;font-size:14px;margin-bottom:6px">Battle</div>
+      <div id="battleSub" class="muted" style="margin-bottom:8px">—</div>
+      <div id="battleBars" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:10px 0"></div>
+      <div id="battleLog" style="text-align:left;max-height:220px;overflow:auto;background:rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:10px;font-size:12px;line-height:1.25"></div>
+      <div class="row" style="margin-top:10px;justify-content:center">
+        <button class="btn primary" id="battleNextBtn">NEXT TURN</button>
+        <button class="btn ghost" id="battleAutoBtn">AUTO</button>
+        <button class="btn" id="battleRetreatBtn">RETREAT</button>
+      </div>
+    `;
+    note.innerHTML="";
+    note.appendChild(wrap);
+  }
+})();
+
+/* ---------- Battle state ---------- */
+let battleState=null; // {playerTeam, enemyTeam, turn, auto, rewards, difficultyName}
+
+function hpBarHTML(label, cur, max){
+  const pct = max<=0 ? 0 : Math.max(0, Math.min(1, cur/max));
+  const w = Math.round(pct*100);
+  return `
+    <div style="min-width:180px;flex:1;background:rgba(255,255,255,.55);border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:8px 10px">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-weight:900">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</span>
+        <span style="font-family:ui-monospace,Menlo,monospace">${cur}/${max}</span>
+      </div>
+      <div style="height:10px;background:rgba(0,0,0,.10);border-radius:999px;margin-top:6px;overflow:hidden">
+        <div style="height:100%;width:${w}%;background:var(--accent)"></div>
+      </div>
+    </div>
+  `;
+}
+
+function logLine(txt){
+  const log=$("battleLog");
+  if(!log) return;
+  const div=document.createElement("div");
+  div.textContent = txt;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog(){
+  const log=$("battleLog");
+  if(log) log.innerHTML="";
+}
+
+/* ---------- Team building ---------- */
+function getPlayerTeam(){
+  ensureSaveIntegrity();
+  // ALL owned ninjas fight together; advantage = more ninjas
+  const team = save.ninjas.map(n=>{
+    recalc(n);
+    return {
+      side:"player",
+      refId:n.id,
+      name:n.name,
+      level:n.level,
+      STR:n.derived.STR, AGI:n.derived.AGI, END:n.derived.END,
+      atk:n.derived.atk, def:n.derived.def, dodge:n.derived.dodge,
+      hp:n.hp, maxHP:n.maxHP,
+    };
+  }).filter(x=>x.hp>0);
+
+  // if somehow all are 0 HP, heal active a bit so the game isn't stuck
+  if(team.length===0){
+    const a=activeNinja(); recalc(a);
+    a.hp = Math.max(1, Math.floor(a.maxHP*0.25));
+    persist();
+    recalc(a);
+    return [{
+      side:"player",
+      refId:a.id,
+      name:a.name,
+      level:a.level,
+      STR:a.derived.STR, AGI:a.derived.AGI, END:a.derived.END,
+      atk:a.derived.atk, def:a.derived.def, dodge:a.derived.dodge,
+      hp:a.hp, maxHP:a.maxHP
+    }];
+  }
+  return team;
+}
+
+function commitPlayerHP(team){
+  // write back hp to save.ninjas
+  for(const m of team){
+    const n = save.ninjas.find(x=>x.id===m.refId);
+    if(n){
+      n.hp = clamp(m.hp, 0, n.maxHP);
+    }
+  }
+}
+
+/* ---------- Enemy clan generation (variable sizes) ---------- */
+function makeEnemyMember(baseLevel, tag){
+  // even-ish spread with small randomness
+  const str = Math.max(1, Math.round(baseLevel/3) + rint(0,2));
+  const agi = Math.max(1, Math.round(baseLevel/3) + rint(0,2));
+  const end = Math.max(1, Math.round(baseLevel/3) + rint(0,2));
+  const level = 1 + (str-1)+(agi-1)+(end-1);
+
+  const STR=str, AGI=agi, END=end;
+  const maxHP = 60 + END*12 + level*4;
+  return {
+    side:"enemy",
+    refId:null,
+    name: `${tag} ${pick(["Scout","Blade","Shadow","Fang","Mist","Viper","Drift","Warden"])}`,
+    level,
+    STR,AGI,END,
+    atk: Math.floor(6 + STR*3 + level*1.2),
+    def: Math.floor(END + level*0.6),
+    dodge: clamp(0.03 + AGI*0.015, 0.03, 0.30),
+    hp:maxHP,
+    maxHP
+  };
+}
+
+function enemyClanSizeFor(difficulty){
+  // VARIABLE clan sizes for enemy
+  // player advantage: their clan size vs enemy size
+  // easy: 1-2, medium: 2-4, hard: 3-6
+  if(difficulty==="easy") return rint(1,2);
+  if(difficulty==="medium") return rint(2,4);
+  if(difficulty==="hard") return rint(3,6);
+  // boss: 1
+  return 1;
+}
+
+function avgPlayerLevel(){
+  const team=getPlayerTeam();
+  const sum = team.reduce((a,b)=>a+b.level,0);
+  return sum / Math.max(1, team.length);
+}
+
+function makeEnemyClan(difficulty){
+  const apl = avgPlayerLevel();
+  const size = enemyClanSizeFor(difficulty);
+  const tag = difficulty==="easy"?"Scout":difficulty==="medium"?"Rival":"Elite";
+  const base = difficulty==="easy" ? Math.max(2, Math.floor(apl*0.85))
+             : difficulty==="medium"? Math.max(3, Math.floor(apl*1.00))
+             : Math.max(4, Math.floor(apl*1.15));
+  return Array.from({length:size}, ()=>makeEnemyMember(base, tag));
+}
+
+/* ---------- Boss: one max-level black belt possible by TP spent (80) evenly spread ---------- */
+function makeBoss(){
+  // TP spent = 80 -> level 81. Even spread: distribute 80 across 3 stats from base 1.
+  // Even: 27,27,26 spent -> base stats: 28,28,27
+  const str=28, agi=28, end=27;
+  const spent = (str-1)+(agi-1)+(end-1); // 80
+  const level = 1 + spent; // 81
+  const STR=str, AGI=agi, END=end;
+  const maxHP = 60 + END*12 + level*4;
+
+  return [{
+    side:"enemy",
+    refId:null,
+    name:"Boss Clan Master",
+    level,
+    STR,AGI,END,
+    atk: Math.floor(6 + STR*3 + level*1.2),
+    def: Math.floor(END + level*0.6),
+    dodge: clamp(0.03 + AGI*0.015, 0.03, 0.30),
+    hp:maxHP,
+    maxHP
+  }];
+}
+
+/* ---------- Battle mechanics ---------- */
+function living(team){ return team.filter(m=>m.hp>0); }
+function pickTarget(team){
+  const alive=living(team);
+  if(alive.length===0) return null;
+  // prioritize lowest hp a bit
+  alive.sort((a,b)=>(a.hp/a.maxHP)-(b.hp/b.maxHP));
+  return alive[0];
+}
+
+function hitRoll(attacker, defender){
+  // simple dodge check
+  const roll = Math.random();
+  return roll >= defender.dodge;
+}
+
+function damageRoll(attacker, defender){
+  // baseline
+  const raw = attacker.atk;
+  const mitig = defender.def * 0.65;
+  let dmg = Math.floor(Math.max(1, raw - mitig));
+  // crit chance from AGI
+  const crit = Math.random() < clamp(0.04 + attacker.AGI*0.002, 0.04, 0.18);
+  if(crit) dmg = Math.floor(dmg*1.6);
+  return {dmg, crit};
+}
+
+function doAttack(attacker, defender){
+  if(!attacker || !defender) return;
+  if(defender.hp<=0) return;
+
+  if(!hitRoll(attacker, defender)){
+    logLine(`${attacker.name} attacks → ${defender.name} DODGED!`);
+    return;
+  }
+  const {dmg, crit} = damageRoll(attacker, defender);
+  defender.hp = clamp(defender.hp - dmg, 0, defender.maxHP);
+  logLine(`${attacker.name} hits ${defender.name} for ${dmg}${crit?" (CRIT)":"."}`);
+  if(defender.hp<=0){
+    logLine(`${defender.name} is defeated!`);
+  }
+}
+
+/* Turn order: all living sorted by AGI desc, tie random */
+function getTurnOrder(playerTeam, enemyTeam){
+  const all = living(playerTeam).concat(living(enemyTeam));
+  all.sort((a,b)=>{
+    if(b.AGI!==a.AGI) return b.AGI-a.AGI;
+    return Math.random()<0.5 ? -1 : 1;
+  });
+  return all;
+}
+
+function renderBattleBars(){
+  const bars=$("battleBars");
+  if(!bars || !battleState) return;
+
+  const pAlive=living(battleState.playerTeam);
+  const eAlive=living(battleState.enemyTeam);
+
+  const pHP = pAlive.reduce((s,m)=>s+m.hp,0);
+  const pMax = pAlive.reduce((s,m)=>s+m.maxHP,0);
+  const eHP = eAlive.reduce((s,m)=>s+m.hp,0);
+  const eMax = eAlive.reduce((s,m)=>s+m.maxHP,0);
+
+  bars.innerHTML = hpBarHTML(`Your Clan (${pAlive.length})`, pHP, pMax) + hpBarHTML(`Enemy Clan (${eAlive.length})`, eHP, eMax);
+}
+
+function checkBattleEnd(){
+  const pAlive=living(battleState.playerTeam).length;
+  const eAlive=living(battleState.enemyTeam).length;
+  if(pAlive===0 || eAlive===0){
+    const win = eAlive===0 && pAlive>0;
+    return {done:true, win};
+  }
+  return {done:false, win:false};
+}
+
+function grantRewards(win){
+  // rewards scale with difficulty and enemy size
+  const diff=battleState.difficulty;
+  const eCount=battleState.enemyTeam.length;
+
+  const goldBase = diff==="easy"? 80 : diff==="medium"? 140 : diff==="hard"? 220 : 400;
+  const karmaBase = diff==="easy"? 10 : diff==="medium"? 18 : diff==="hard"? 28 : 45;
+
+  const gold = Math.round(goldBase + eCount*35 + Math.random()*25);
+  const karma = Math.round(karmaBase + eCount*6 + Math.random()*4);
+
+  if(win){
+    save.currency.gold += gold;
+    save.currency.karma += karma;
+    save.meta.wins = (save.meta.wins||0)+1;
+    logLine(`🏆 Victory! Rewards: 🪙+${gold} • ☯+${karma}`);
+  }else{
+    // small consolation
+    const g2 = Math.round(gold*0.25);
+    save.currency.gold += g2;
+    save.meta.losses = (save.meta.losses||0)+1;
+    logLine(`💀 Defeat. Consolation: 🪙+${g2}`);
+  }
+  persist(); refreshTop();
+}
+
+function endBattleToTown(){
+  // commit player hp
+  commitPlayerHP(battleState.playerTeam);
+  persist(); refreshTop();
+  battleState=null;
+
+  $("battle").classList.add("hidden");
+  $("town").classList.remove("hidden");
+}
+
+/* ---------- One full turn ---------- */
+function doTurn(){
+  if(!battleState) return;
+
+  const order=getTurnOrder(battleState.playerTeam, battleState.enemyTeam);
+  for(const actor of order){
+    if(actor.hp<=0) continue;
+    if(actor.side==="player"){
+      const t=pickTarget(battleState.enemyTeam);
+      doAttack(actor, t);
+    }else{
+      const t=pickTarget(battleState.playerTeam);
+      doAttack(actor, t);
+    }
+
+    const end=checkBattleEnd();
+    if(end.done){
+      // write back player hp + reward
+      commitPlayerHP(battleState.playerTeam);
+      persist();
+      renderBattleBars();
+      grantRewards(end.win);
+      $("battleNextBtn").disabled=true;
+      $("battleAutoBtn").disabled=true;
+
+      setTimeout(()=>endBattleToTown(), 650);
+      return;
+    }
+  }
+  battleState.turn++;
+  renderBattleBars();
+}
+
+/* ---------- Start battle ---------- */
+function startBattle(difficulty, label){
+  ensureSaveIntegrity();
+  // build teams
+  const playerTeam=getPlayerTeam();
+  let enemyTeam;
+  if(difficulty==="boss") enemyTeam = makeBoss();
+  else enemyTeam = makeEnemyClan(difficulty);
+
+  battleState = {
+    difficulty,
+    label,
+    playerTeam,
+    enemyTeam,
+    turn:1,
+    auto:false
+  };
+
+  // show battle screen
+  $("town").classList.add("hidden");
+  $("battle").classList.remove("hidden");
+
+  $("battleTitle").textContent = label || "Battle";
+  $("battleSub").textContent = `Turn-based clash: all your ninjas fight together. Enemy clan size varies.`;
+  $("battleNextBtn").disabled=false;
+  $("battleAutoBtn").disabled=false;
+
+  clearLog();
+  logLine(`⚔️ ${label}`);
+  logLine(`Your clan: ${playerTeam.length} ninja(s). Enemy clan: ${enemyTeam.length} ninja(s).`);
+  renderBattleBars();
+}
+
+$("battleNextBtn").onclick=()=>doTurn();
+$("battleAutoBtn").onclick=()=>{
+  if(!battleState) return;
+  battleState.auto = !battleState.auto;
+  $("battleAutoBtn").textContent = battleState.auto ? "STOP" : "AUTO";
+  if(battleState.auto){
+    const loop=()=>{
+      if(!battleState || !battleState.auto) return;
+      doTurn();
+      if(battleState && battleState.auto){
+        setTimeout(loop, 350);
+      }
+    };
+    loop();
+  }
+};
+$("battleRetreatBtn").onclick=()=>{
+  if(!battleState) return;
+  logLine("🏳️ You retreated.");
+  // still commit HP changes
+  commitPlayerHP(battleState.playerTeam);
+  persist(); refreshTop();
+  battleState=null;
+  endBattleToTown();
+};
+
+/* ---------- Battle selection modal now starts real battle ---------- */
+function renderBattleSelect(){
+  const list=$("battleList");
+  list.innerHTML="";
+
+  const options=[
+    {key:"easy",  name:"Scout Clan (Easy)",  desc:"Smaller enemy clan (1–2)."},
+    {key:"medium",name:"Rival Clan (Medium)",desc:"Enemy clan (2–4)."},
+    {key:"hard",  name:"Elite Clan (Hard)",  desc:"Bigger enemy clan (3–6)."},
+    {key:"boss",  name:"Boss Clan",          desc:"1 max-level black belt ninja (even stats)."},
+  ];
+
+  for(const o of options){
+    const row=document.createElement("div");
+    row.className="item";
+    row.innerHTML=`
+      <div>
+        <div style="font-weight:1000">${o.name}</div>
+        <div class="muted">${o.desc}</div>
+      </div>
+      <button class="btn primary small" data-battle="${o.key}">FIGHT</button>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("button[data-battle]").forEach(b=>{
+    b.onclick=()=>{
+      const key=b.getAttribute("data-battle");
+      closeModal("battleSelectModal");
+      const label = options.find(x=>x.key===key)?.name || "Battle";
+      startBattle(key, label);
+    };
+  });
+}
+
+/* ---------- Hospital tweak: heal ALL ninjas (since battles use whole clan) ---------- */
+$("hsHospital").onclick=()=>{
+  ensureSaveIntegrity();
+  for(const n of save.ninjas){
+    recalc(n);
+    n.hp = n.maxHP;
+  }
+  persist(); refreshTop();
+  alert("Your whole clan is healed!");
+};
+
+/* ---------- Daily meditation: reward TP to ACTIVE ninja (kept) ---------- */
 $("dailyBtn").onclick=()=>{
   const now=Date.now();
   const last=save.daily?.lastClaim||0;
@@ -1912,116 +2480,23 @@ $("dailyBtn").onclick=()=>{
     return;
   }
   const a=activeNinja();
-  a.tp += 3; // reward
+  a.tp += 3;
   save.daily.lastClaim = now;
   persist(); refreshTop();
-  alert("+3 TP!");
+  alert("+3 TP to Active Ninja!");
 };
 
-/* ---------- Battle select (Step 2 placeholder) ---------- */
-$("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
-function renderBattleSelect(){
-  const list=$("battleList");
-  list.innerHTML="";
-
-  const options=[
-    {name:"Scout Clan (Easy)",desc:"Small enemy clan."},
-    {name:"Rival Clan (Medium)",desc:"Balanced enemy clan."},
-    {name:"Elite Clan (Hard)",desc:"Bigger enemy clan."},
-    {name:"Boss Clan",desc:"Step 3 adds the real boss fight."},
-  ];
-  for(const o of options){
-    const row=document.createElement("div");
-    row.className="item";
-    row.innerHTML=`
-      <div>
-        <div style="font-weight:1000">${o.name}</div>
-        <div class="muted">${o.desc}</div>
-      </div>
-      <button class="btn primary small" data-battle="${o.name}">Select</button>
-    `;
-    list.appendChild(row);
-  }
-  list.querySelectorAll("button[data-battle]").forEach(b=>{
-    b.onclick=()=>{
-      closeModal("battleSelectModal");
-      // show placeholder battle screen (to confirm battle.jpg loads)
-      $("town").classList.add("hidden");
-      $("battle").classList.remove("hidden");
-    };
-  });
+/* ---------- Make sure battle back button still works (now retreats) ---------- */
+if($("battleBackBtn")){
+  $("battleBackBtn").onclick=()=>{ $("battleRetreatBtn").click(); };
 }
 
-/* ---------- Buildings ---------- */
-$("hsHospital").onclick=()=>{
-  const a=activeNinja(); recalc(a);
-  a.hp=a.maxHP;
-  persist(); refreshTop();
-};
-
-$("hsDojo").onclick=()=>{
-  setDojoTab("train");
-  renderDojoTraining();
-  renderDojoNinja();
-  openModal("dojoModal");
-};
-
-$("hsDaimyo").onclick=()=>{
-  renderDaimyo();
-  openModal("daiModal");
-};
-
-$("hsRecruit").onclick=()=>{
-  rosterSelectedId = save.activeId;
-  renderRoster();
-  openModal("recruitModal");
-};
-
-$("hsWeapon").onclick=()=>{
-  ensureWeaponStock();
-  weaponSelectedId = save.shop.weapons[0]?.id || null;
-  renderWeaponShop();
-  openModal("weaponModal");
-};
-
-$("hsRelic").onclick=()=>{
-  ensureRelicStock();
-  relicSelectedId = save.shop.relics[0]?.id || null;
-  renderRelicShop();
-  openModal("relicModal");
-};
-
-$("hsFight").onclick=()=>{
-  renderBattleSelect();
-  openModal("battleSelectModal");
-};
-
-/* battle placeholder back */
-$("battleBackBtn").onclick=()=>{
-  $("battle").classList.add("hidden");
-  $("town").classList.remove("hidden");
-};
-
-/* ---------- Top buttons ---------- */
-$("profilesBtn").onclick=()=>{
-  renderProfiles();
-  openModal("profilesModal");
-};
-
-$("saveBtn").onclick=()=>{ persist(); refreshTop(); };
-
-$("resetBtn").onclick=()=>{
-  profiles.slots[profiles.active]=defaultSlot();
-  save=profiles.slots[profiles.active];
-  persistProfiles();
-  refreshTop();
-  alert("Slot reset!");
-};
-
-/* ---------- Init ---------- */
+/* ---------- Final init hardening ---------- */
+ensureSaveIntegrity();
 persist();
 refreshTop();
 
-</script>
-</body>
-</html>
+/* ======================================================
+   END PART 5 — FULL GAME FEATURES COMPLETE
+====================================================== */
+<!-- PART 5/5 END -->
