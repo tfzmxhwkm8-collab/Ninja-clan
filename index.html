@@ -1754,7 +1754,23 @@ function rr(ctx,x,y,w,h,r){
   ctx.arcTo(x,y, x+w,y, rr);
   ctx.closePath();
 }
+function hash01(str){
+  // deterministic 0..1 from a string (same ninja always gets same wear)
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 10000) / 10000;
+}
 
+function shadeRGBA(hex, a=1){
+  // "#rrggbb" -> "rgba(r,g,b,a)"
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
 function drawMaskedNinja(n, v){
   const ctx = bctx;
   const dead = n.hp<=0;
@@ -1822,6 +1838,63 @@ function drawMaskedNinja(n, v){
   rr(ctx,-13,-8,26,28,10);
   ctx.fill();
 
+   // --- BELT (worn) ---
+  const spent = tpSpent(n);
+  const beltName = beltFromSpent(spent);
+  const beltHex  = BELT_COLOR[beltName] || "#f5f5f5";
+
+  // Belt position on the torso (matches your body box)
+  const bx = -13, by = 6, bw = 26, bh = 6;
+
+  // base belt fill
+  ctx.fillStyle = shadeRGBA(beltHex, 0.95);
+  rr(ctx, bx, by, bw, bh, 3);
+  ctx.fill();
+
+  // darker “fold” strip
+  ctx.fillStyle = "rgba(0,0,0,.18)";
+  rr(ctx, bx, by+2, bw, 2, 2);
+  ctx.fill();
+
+    // knot + tails (safe)
+  const dirB = (v.side==="L") ? 1 : -1;
+
+  // knot
+  ctx.fillStyle = "rgba(0,0,0,.22)";
+  rr(ctx, -2, by-1, 4, bh+2, 2);
+  ctx.fill();
+
+  // tail (always positive width)
+  ctx.fillStyle = shadeRGBA(beltHex, 0.92);
+  const tailW = 10;
+  const tailX = (dirB === 1) ? 2 : (2 - tailW); // if facing right, extend left
+  rr(ctx, tailX, by+bh-1, tailW, 3, 2);
+  ctx.fill();
+
+  // wear: tiny scratches + faded specks (deterministic per ninja)
+  const seed = hash01(n.id || n.name || "x");
+  ctx.save();
+  ctx.globalAlpha = 0.25 + seed*0.15;
+  ctx.strokeStyle = "rgba(255,255,255,.65)";
+  ctx.lineWidth = 1;
+  for(let i=0;i<6;i++){
+    const t = (seed*13 + i*0.21) % 1;
+    const x = bx + 2 + t*(bw-4);
+    const y = by + 1 + ((seed*7 + i*0.33) % 1)*(bh-2);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 3, y + 0.4);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = "rgba(0,0,0,.45)";
+  for(let i=0;i<5;i++){
+    const t = (seed*19 + i*0.27) % 1;
+    ctx.fillRect(bx + 2 + t*(bw-4), by + 1, 1, 1);
+  }
+  ctx.restore();
+  // --- end belt ---
+  
   // headband
   ctx.fillStyle = trim;
   rr(ctx,-12,-30,24,5,3);
