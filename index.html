@@ -1217,32 +1217,39 @@ $("dailyBtn").onclick=()=>{
    - Your entire owned roster fights each battle (alive ones)
    - Enemy clan size varies by selection & can exceed yours
    - Includes Boss fight: 1 max-level Black Belt style ninja
+   FIXES:
+   - Uses correct button id: battleNextBtn (not battleStepBtn)
+   - Next button advances battle
+   - Auto toggles on/off and stops when battle ends
+   - Retreat cleanly returns to town
+   - HUD + log display updates (bhLeft/bhMid/bhRight + battleSub + battleText)
 ====================================================== */
 
 let battleState=null;
+let battleAutoTimer=null;
 
+/* ---------- Enemy creation ---------- */
 function makeEnemyNinja(template){
   const n=makeNinja(template?.name||null);
-  // enemy has no TP; we directly set base stats
   n.tp=0;
   n.base.str=template.str;
   n.base.agi=template.agi;
   n.base.end=template.end;
   n.equip.weaponId=null;
   n.equip.relicId=null;
-  n.hp = null;
+  n.hp=null;
   recalc(n);
   n.hp=n.maxHP;
   n.isEnemy=true;
+  n.isBoss=!!template?.isBoss;
   return n;
 }
 
 function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 40); }
 
 function genEnemyClan(difficulty){
-  // variable sizes by difficulty + randomness
-  // (having more ninjas is advantageous)
   const yourCount = save.ninjas.length;
+
   const base =
     difficulty==="easy" ? rint(2,4) :
     difficulty==="medium" ? rint(3,5) :
@@ -1253,8 +1260,11 @@ function genEnemyClan(difficulty){
     difficulty==="boss" ? 1 :
     clamp(base + rint(-1,1) + Math.floor(yourCount*0.25), 1, 10);
 
-  // enemy stats scale with your average level
-  const avgLv = Math.max(1, Math.round(save.ninjas.reduce((s,n)=>{recalc(n);return s+n.level;},0)/save.ninjas.length));
+  const avgLv = Math.max(
+    1,
+    Math.round(save.ninjas.reduce((s,n)=>{recalc(n);return s+n.level;},0)/save.ninjas.length)
+  );
+
   const statBase =
     difficulty==="easy" ? avgLv*0.65 :
     difficulty==="medium" ? avgLv*0.85 :
@@ -1263,49 +1273,43 @@ function genEnemyClan(difficulty){
 
   const clan=[];
   for(let i=0;i<size;i++){
-    const spread = [
-      1.0+rand(-0.15,0.25),
-      1.0+rand(-0.15,0.25),
-      1.0+rand(-0.15,0.25),
-    ];
-    const sum = spread[0]+spread[1]+spread[2];
-    const s = clampEnemyStat((statBase*3)*(spread[0]/sum));
-    const a = clampEnemyStat((statBase*3)*(spread[1]/sum));
-    const e = clampEnemyStat((statBase*3)*(spread[2]/sum));
+    const spread=[1+rand(-0.15,0.25),1+rand(-0.15,0.25),1+rand(-0.15,0.25)];
+    const sum=spread[0]+spread[1]+spread[2];
+    const s=clampEnemyStat((statBase*3)*(spread[0]/sum));
+    const a=clampEnemyStat((statBase*3)*(spread[1]/sum));
+    const e=clampEnemyStat((statBase*3)*(spread[2]/sum));
     clan.push(makeEnemyNinja({str:s, agi:a, end:e}));
   }
-
   return clan;
 }
 
 function makeBossEnemy(){
-  // 1 max level black belt ninja with even spread stats that would be possible
-  // Black belt threshold: spent>=80 => level>=81 (since level = spent + 1)
-  // Even spread of spent: base stats = 1 + floor(80/3)=27 (approx), remaining distributed
   const spent=80;
   const each=Math.floor(spent/3); // 26
-  const rem=spent - each*3; // 2
+  const rem=spent - each*3;       // 2
   const baseStr=1+each + (rem>0?1:0);
   const baseAgi=1+each + (rem>1?1:0);
   const baseEnd=1+each;
-  const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd});
-  // Give boss a "virtual legendary" weapon effect baked into stats
+
+  const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
   boss.base.str += 6; boss.base.agi += 6; boss.base.end += 2;
   recalc(boss); boss.hp=boss.maxHP;
   boss.isBoss=true;
   return [boss];
 }
 
+/* ---------- Your team ---------- */
 function battleTeamYour(){
-  // all owned ninjas join; if hp missing, reset to full
   return save.ninjas.map(n=>{
     recalc(n);
     n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
     n.isEnemy=false;
+    n.isBoss=false;
     return n;
   });
 }
 
+/* ---------- helpers ---------- */
 function living(team){ return team.filter(n=>n.hp>0); }
 function pickTarget(team){ const alive=living(team); return alive.length?pick(alive):null; }
 
@@ -1320,9 +1324,11 @@ function dealDamage(att, def, mult=1){
   const base = att.derived.atk;
   const mitigation = 1 - clamp(def.derived.def/(def.derived.def+50), 0.15, 0.65);
   let dmg = Math.max(1, Math.floor(base * mitigation * mult));
+
   const r = rollHit(att, def);
   if(!r.hit) return {dmg:0, dodged:true, crit:false};
-  if(r.crit){ dmg = Math.floor(dmg*1.55); }
+  if(r.crit) dmg = Math.floor(dmg*1.55);
+
   def.hp = clamp(def.hp - dmg, 0, def.maxHP);
   return {dmg, dodged:false, crit:r.crit};
 }
@@ -1341,7 +1347,9 @@ function buildTurnOrder(){
   return all;
 }
 
+/* ---------- End / rewards ---------- */
 function endBattle(victory){
+  if(!battleState) return;
   battleState.over=true;
   battleState.victory=victory;
 
@@ -1353,11 +1361,18 @@ function endBattle(victory){
   if(victory) save.meta.wins=(save.meta.wins||0)+1;
   else save.meta.losses=(save.meta.losses||0)+1;
 
-  battleLogPush(victory ? `🏁 Victory! Rewards: 🪙${rewardGold}, ☯${rewardKarma}` : `🏁 Defeat… Consolation: 🪙${rewardGold}, ☯${rewardKarma}`);
+  battleLogPush(
+    victory
+      ? `🏁 Victory! Rewards: 🪙${rewardGold}, ☯${rewardKarma}`
+      : `🏁 Defeat… Consolation: 🪙${rewardGold}, ☯${rewardKarma}`
+  );
+
+  stopBattleAuto();
   persist(); refreshTop();
   renderBattleHUD();
 }
 
+/* ---------- Turn step ---------- */
 function stepBattleRound(){
   if(!battleState || battleState.over) return;
 
@@ -1368,18 +1383,15 @@ function stepBattleRound(){
     if(actor.hp<=0) continue;
 
     const isEnemy = actor.isEnemy;
-    const allies = isEnemy ? battleState.enemy : battleState.your;
-    const foes   = isEnemy ? battleState.your  : battleState.enemy;
+    const foes   = isEnemy ? battleState.your : battleState.enemy;
 
     const target = pickTarget(foes);
     if(!target){
-      endBattle(!isEnemy); // if actor is your team and no enemy => victory
+      endBattle(!isEnemy);
       break;
     }
 
-    // Basic attack
-    const mult = 1;
-    const res = dealDamage(actor, target, mult);
+    const res = dealDamage(actor, target, 1);
 
     const an = actor.isBoss ? "👹 Boss" : (isEnemy ? "Enemy" : actor.name);
     const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Your Ninja") : target.name;
@@ -1388,12 +1400,9 @@ function stepBattleRound(){
       battleLogPush(`${an} attacks → ${tn} dodges!`);
     }else{
       battleLogPush(`${an} hits ${tn} for ${res.dmg}${res.crit?" (CRIT)":"."}`);
-      if(target.hp<=0){
-        battleLogPush(`💀 ${tn} is down!`);
-      }
+      if(target.hp<=0) battleLogPush(`💀 ${tn} is down!`);
     }
 
-    // Check win/lose after each action
     if(living(battleState.enemy).length===0){ endBattle(true); break; }
     if(living(battleState.your).length===0){ endBattle(false); break; }
   }
@@ -1402,8 +1411,10 @@ function stepBattleRound(){
   renderBattleHUD();
 }
 
+/* ---------- Start / leave ---------- */
 function startBattle(kind){
-  // kind: easy/medium/hard/boss
+  stopBattleAuto();
+
   const your = battleTeamYour();
   const enemy = (kind==="boss") ? makeBossEnemy() : genEnemyClan(kind);
 
@@ -1418,21 +1429,78 @@ function startBattle(kind){
     log:[`⚔️ Battle start: ${kind.toUpperCase()} — Your clan ${your.length} vs Enemy ${enemy.length}`]
   };
 
-  // switch screens
   $("town").classList.add("hidden");
   $("battle").classList.remove("hidden");
   renderBattleHUD();
 }
-function renderBattleHUD(){
 
-  // disable controls if over
-  const stepBtn=document.getElementById("battleStepBtn");
-  const autoBtn=document.getElementById("battleAutoBtn");
-  if(stepBtn) stepBtn.disabled = battleState.over;
-  if(autoBtn) autoBtn.disabled = battleState.over;
+function leaveBattle(){
+  stopBattleAuto();
+  battleState=null;
+  $("battle").classList.add("hidden");
+  $("town").classList.remove("hidden");
 }
 
-/* ---------- Battle select modal (now launches real battles) ---------- */
+/* ---------- HUD + buttons ---------- */
+function renderBattleHUD(){
+  if(!battleState) return;
+
+  const yourAlive = living(battleState.your).length;
+  const enemyAlive = living(battleState.enemy).length;
+
+  $("bhLeft").textContent  = `Your: ${yourAlive}/${battleState.your.length}`;
+  $("bhMid").textContent   = `Round ${battleState.round} • ${battleState.kind.toUpperCase()}`;
+  $("bhRight").textContent = `Enemy: ${enemyAlive}/${battleState.enemy.length}`;
+
+  $("battleTitle").textContent = battleState.over
+    ? (battleState.victory ? "Victory!" : "Defeat…")
+    : "Battle";
+
+  $("battleSub").textContent =
+    `Your ${battleState.your.length} vs Enemy ${battleState.enemy.length} (start ${battleState.enemyStart})`;
+
+  $("battleText").textContent = battleState.log.slice(-8).join("\n") || "—";
+
+  const nextBtn = document.getElementById("battleNextBtn"); // FIXED
+  const autoBtn = document.getElementById("battleAutoBtn");
+  if(nextBtn) nextBtn.disabled = battleState.over;
+  if(autoBtn) autoBtn.disabled = battleState.over;
+
+  if(battleState.over) stopBattleAuto();
+}
+
+/* ---------- Auto ---------- */
+function startBattleAuto(){
+  if(!battleState || battleState.over) return;
+  if(battleAutoTimer) return;
+  $("battleAutoBtn").textContent="Auto: ON";
+  battleAutoTimer=setInterval(()=>{
+    if(!battleState || battleState.over){ stopBattleAuto(); return; }
+    stepBattleRound();
+  }, 550);
+}
+function stopBattleAuto(){
+  if(battleAutoTimer){ clearInterval(battleAutoTimer); battleAutoTimer=null; }
+  const btn=document.getElementById("battleAutoBtn");
+  if(btn) btn.textContent="Auto";
+}
+
+/* ---------- Bind battle UI handlers (idempotent) ---------- */
+if(document.getElementById("battleNextBtn")){
+  $("battleNextBtn").onclick=()=>stepBattleRound();
+}
+if(document.getElementById("battleAutoBtn")){
+  $("battleAutoBtn").onclick=()=>{
+    if(!battleState || battleState.over) return;
+    if(battleAutoTimer) stopBattleAuto();
+    else startBattleAuto();
+  };
+}
+if(document.getElementById("battleRetreatBtn")){
+  $("battleRetreatBtn").onclick=()=>leaveBattle();
+}
+
+/* ---------- Battle select modal (launches battles) ---------- */
 $("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
 
 function renderBattleSelect(){
