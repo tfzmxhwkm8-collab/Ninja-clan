@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Ninja Town RPG</title>
+<title>Oz Ninja Town RPG</title>
 <style>
   html,body{
     margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
@@ -20,50 +20,59 @@
   *{-webkit-tap-highlight-color:transparent}
   .hidden{display:none!important}
 
-  /* ===== Top bar ===== */
+  /* ===== Compact Top bar (condensed) ===== */
   #topbar{
     position:absolute; z-index:50;
-    left:calc(10px + var(--pad-left));
-    right:calc(10px + var(--pad-right));
-    top:calc(10px + var(--pad-top));
-    display:flex;gap:10px;align-items:center;justify-content:space-between;
+    left:calc(8px + var(--pad-left));
+    right:calc(8px + var(--pad-right));
+    top:calc(8px + var(--pad-top));
+    display:flex;gap:8px;align-items:center;justify-content:space-between;
     background:linear-gradient(var(--wood1),var(--wood2));
     border:2px solid rgba(0,0,0,.18);
-    border-radius:14px;padding:10px 12px;
-    box-shadow:0 10px 24px rgba(0,0,0,.25);
+    border-radius:14px;
+    padding:8px 10px;               /* smaller */
+    box-shadow:0 10px 24px rgba(0,0,0,.22);
     color:var(--ink);
   }
-  .barL,.barR{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .barL,.barR{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .chip{
-    display:flex;gap:8px;align-items:center;
-    background:rgba(255,255,255,.25);
+    display:flex;gap:6px;align-items:center;
+    background:rgba(255,255,255,.24);
     border:1px solid rgba(0,0,0,.14);
-    border-radius:999px;padding:6px 10px;font-weight:950;font-size:12px;
+    border-radius:999px;
+    padding:5px 8px;                /* smaller */
+    font-weight:950;
+    font-size:11px;                 /* smaller */
+    line-height:1;
   }
   .chip b{font-family:ui-monospace,Menlo,monospace}
   .btn{
-    border:0;border-radius:12px;padding:10px 12px;font-weight:950;
-    background:#eee;color:#111; box-shadow:0 6px 14px rgba(0,0,0,.18);
+    border:0;border-radius:12px;
+    padding:8px 10px;               /* smaller */
+    font-weight:950;
+    background:#eee;color:#111;
+    box-shadow:0 6px 14px rgba(0,0,0,.18);
+    font-size:12px;
   }
-  .btn.primary{background:var(--accent)}
   .btn.ghost{background:rgba(255,255,255,.25); border:1px solid rgba(0,0,0,.14);}
-  .btn.small{padding:8px 10px;font-size:12px;border-radius:11px}
   .btn:disabled{opacity:.55}
 
   /* ===== Town screen ===== */
   #town{
     position:absolute; inset:0;
-    padding-top:calc(64px + var(--pad-top));
+    /* less top padding so you can see buildings */
+    padding-top:calc(54px + var(--pad-top));
   }
   #townBg{
     position:absolute; inset:0;
     background-image:url("town.jpg");
     background-size:cover;
-    background-position:center;
+    /* LOWER the island: move image DOWN (higher % means show lower area) */
+    background-position:center 78%;
     background-repeat:no-repeat;
   }
 
-  /* Invisible click areas (no rectangles) */
+  /* Invisible click zones */
   .hotspot{
     position:absolute;
     background:transparent;
@@ -73,17 +82,51 @@
     z-index:10;
     touch-action:manipulation;
   }
-  /* OPTIONAL: debug hit zones */
+  /* OPTIONAL debug hit zones */
   .hotspot.debug{ background:rgba(255,255,255,.12); outline:2px solid rgba(255,255,255,.20); }
 
-  /* Hit zone positions */
-  #hsDaimyo   { left:  4%; top: 14%; width: 28%; height: 22%; }
-  #hsHospital { left: 30%; top: 24%; width: 26%; height: 20%; }
-  #hsRelic    { left: 54%; top: 18%; width: 28%; height: 22%; }
-  #hsWeapon   { left: 70%; top: 34%; width: 28%; height: 22%; }
-  #hsRecruit  { left:  8%; top: 52%; width: 34%; height: 24%; }
-  #hsDojo     { left: 40%; top: 58%; width: 30%; height: 22%; }
-  #hsFight    { left: 70%; top: 74%; width: 28%; height: 24%; }
+  /* Visible building labels */
+  .label{
+    position:absolute;
+    z-index:12;
+    pointer-events:none; /* taps go to hotspots under it */
+    background:rgba(255,255,255,.75);
+    border:1px solid rgba(0,0,0,.18);
+    border-radius:999px;
+    padding:6px 10px;
+    font-weight:1000;
+    font-size:12px;
+    color:#111;
+    box-shadow:0 10px 22px rgba(0,0,0,.20);
+    white-space:nowrap;
+  }
+
+  /* ===== UPDATED hotspot positions for your NEW island layout (screenshot) =====
+     Note: These are tuned to iPhone portrait.
+  */
+  /* Top center red building */
+  #hsDaimyo   { left: 34%; top: 30%; width: 32%; height: 18%; }
+  /* Top right blue building */
+  #hsWeapon   { left: 62%; top: 34%; width: 33%; height: 18%; }
+  /* Left yellow building */
+  #hsRelic    { left:  6%; top: 44%; width: 30%; height: 18%; }
+  /* Small shrine/spot near left (use as Hospital tap) */
+  #hsHospital { left: 20%; top: 52%; width: 20%; height: 14%; }
+  /* Bottom-left green building */
+  #hsRecruit  { left:  7%; top: 62%; width: 36%; height: 22%; }
+
+  /* Circle pit bottom-right: split into Dojo (upper) + Battle (lower) */
+  #hsDojo     { left: 47%; top: 60%; width: 48%; height: 13%; }  /* top half of pit */
+  #hsFight    { left: 47%; top: 71%; width: 48%; height: 17%; }  /* bottom half of pit */
+
+  /* Label positions (near buildings) */
+  #lbDaimyo  { left: 38%; top: 27%; }
+  #lbWeapon  { left: 68%; top: 31%; }
+  #lbRelic   { left:  9%; top: 41%; }
+  #lbHospital{ left: 18%; top: 49%; }
+  #lbRecruit { left: 12%; top: 59%; }
+  #lbDojo    { left: 60%; top: 58%; }
+  #lbBattle  { left: 62%; top: 73%; }
 
   /* ===== Modals ===== */
   .modal{
@@ -145,11 +188,11 @@
   #battle{ position:absolute; inset:0; z-index:60; }
   #battleBg{
     position:absolute; inset:0;
+    /* IMPORTANT: this pulls battle.jpg from your repo */
     background-image:url("battle.jpg");
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
-    transform:scale(1.02);
   }
   #battleCanvas{position:absolute; inset:0; width:100%; height:100%}
   #battleTop{
@@ -187,17 +230,17 @@
 <body>
   <div id="topbar">
     <div class="barL">
-      <div class="chip">Build <b>v4-ACTIONS-IMG</b></div>
-      <div class="chip">Active <b id="uiName">—</b></div>
-      <div class="chip">HP <b id="uiHP">—</b></div>
+      <div class="chip">Build <b>v5-TOWN-LABELS</b></div>
+      <div class="chip"><span>Active</span> <b id="uiName">—</b></div>
+      <div class="chip"><span>HP</span> <b id="uiHP">—</b></div>
       <div class="chip">☯ <b id="uiKarma">0</b></div>
       <div class="chip">🪙 <b id="uiGold">0</b></div>
-      <div class="chip">Belt <b id="uiBelt">White</b></div>
-      <div class="chip">Tier <b id="uiTier">1</b></div>
+      <div class="chip"><span>Belt</span> <b id="uiBelt">White</b></div>
+      <div class="chip"><span>Tier</span> <b id="uiTier">1</b></div>
     </div>
     <div class="barR">
-      <button class="btn ghost small" id="saveBtn">Save</button>
-      <button class="btn ghost small" id="resetBtn">Reset</button>
+      <button class="btn ghost" id="saveBtn">Save</button>
+      <button class="btn ghost" id="resetBtn">Reset</button>
     </div>
   </div>
 
@@ -205,13 +248,25 @@
   <div id="town">
     <div id="townBg"></div>
 
+    <!-- Visible labels -->
+    <div class="label" id="lbDaimyo">Daimyo</div>
+    <div class="label" id="lbRelic">Relic Shop</div>
+    <div class="label" id="lbWeapon">Weapon Shop</div>
+    <div class="label" id="lbRecruit">Recruit</div>
+    <div class="label" id="lbHospital">Hospital</div>
+    <div class="label" id="lbDojo">Dojo</div>
+    <div class="label" id="lbBattle">Battle</div>
+
+    <!-- Invisible building hit-zones -->
     <button class="hotspot" id="hsDaimyo"   aria-label="Daimyo"></button>
-    <button class="hotspot" id="hsHospital" aria-label="Hospital"></button>
     <button class="hotspot" id="hsRelic"    aria-label="Relic Shop"></button>
     <button class="hotspot" id="hsWeapon"   aria-label="Weapon Shop"></button>
     <button class="hotspot" id="hsRecruit"  aria-label="Recruit"></button>
+    <button class="hotspot" id="hsHospital" aria-label="Hospital"></button>
+
+    <!-- Pit split -->
     <button class="hotspot" id="hsDojo"     aria-label="Dojo"></button>
-    <button class="hotspot" id="hsFight"    aria-label="Fight"></button>
+    <button class="hotspot" id="hsFight"    aria-label="Battle"></button>
   </div>
 
   <!-- Battle -->
@@ -239,9 +294,9 @@
     <div class="card">
       <div class="row sp">
         <h3 class="title">Dojo Training</h3>
-        <button class="btn ghost small" id="closeDojo">Close</button>
+        <button class="btn ghost" id="closeDojo">Close</button>
       </div>
-      <div class="muted">Train your active ninja in 3 stats. No skills/specials.</div>
+      <div class="muted">Train STR / AGI / END with Training Points (TP).</div>
 
       <div class="statGrid">
         <div class="stat">Strength<br><b id="stSTR">1</b><div class="muted">Damage</div></div>
@@ -250,9 +305,9 @@
       </div>
 
       <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="trainSTR">+ STR (1 TP)</button>
-        <button class="btn primary" id="trainAGI">+ AGI (1 TP)</button>
-        <button class="btn primary" id="trainEND">+ END (1 TP)</button>
+        <button class="btn" style="background:var(--accent)" id="trainSTR">+ STR (1 TP)</button>
+        <button class="btn" style="background:var(--accent)" id="trainAGI">+ AGI (1 TP)</button>
+        <button class="btn" style="background:var(--accent)" id="trainEND">+ END (1 TP)</button>
       </div>
 
       <div class="muted" style="margin-top:10px">
@@ -266,9 +321,9 @@
     <div class="card">
       <div class="row sp">
         <h3 class="title">Daimyo</h3>
-        <button class="btn ghost small" id="closeDai">Close</button>
+        <button class="btn ghost" id="closeDai">Close</button>
       </div>
-      <div class="muted">Belts are earned by XP (from fights). Winning increases Tier.</div>
+      <div class="muted">Belts are earned by XP. Win 3 fights to tier up.</div>
 
       <div class="statGrid">
         <div class="stat">Belt<br><b id="dBelt">White</b></div>
@@ -277,7 +332,7 @@
       </div>
 
       <div class="row" style="margin-top:10px">
-        <div class="stat">Tier<br><b id="dTier">1</b><div class="muted">Win 3 fights to tier up</div></div>
+        <div class="stat">Tier<br><b id="dTier">1</b></div>
         <div class="stat">Wins<br><b id="dWins">0</b></div>
         <div class="stat">Losses<br><b id="dLosses">0</b></div>
       </div>
@@ -289,12 +344,12 @@
     <div class="card">
       <div class="row sp">
         <h3 class="title">Recruit Ninjas</h3>
-        <button class="btn ghost small" id="closeRecruit">Close</button>
+        <button class="btn ghost" id="closeRecruit">Close</button>
       </div>
       <div class="muted" id="recruitLockText"></div>
 
       <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="recruitBtn">Recruit (🪙 <span id="recruitCost">120</span>)</button>
+        <button class="btn" style="background:var(--accent)" id="recruitBtn">Recruit (🪙 <span id="recruitCost">120</span>)</button>
         <button class="btn ghost" id="setActiveBtn">Set Selected Active</button>
       </div>
 
@@ -308,13 +363,13 @@
     <div class="card">
       <div class="row sp">
         <h3 class="title">Weapon Shop</h3>
-        <button class="btn ghost small" id="closeWeapon">Close</button>
+        <button class="btn ghost" id="closeWeapon">Close</button>
       </div>
-      <div class="muted">Buy with 🪙 Gold. Equip 1 weapon on the active ninja.</div>
+      <div class="muted">Buy with 🪙 Gold. Equip 1 weapon on active ninja.</div>
 
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="buyWeaponBtn">Buy Selected</button>
-        <button class="btn primary" id="equipWeaponBtn">Equip Selected</button>
+        <button class="btn" style="background:var(--accent)" id="equipWeaponBtn">Equip Selected</button>
       </div>
 
       <div class="list" id="weaponList"></div>
@@ -326,13 +381,13 @@
     <div class="card">
       <div class="row sp">
         <h3 class="title">Relic Shop</h3>
-        <button class="btn ghost small" id="closeRelic">Close</button>
+        <button class="btn ghost" id="closeRelic">Close</button>
       </div>
-      <div class="muted">Buy with ☯ Karma. Equip 1 relic on the active ninja.</div>
+      <div class="muted">Buy with ☯ Karma. Equip 1 relic on active ninja.</div>
 
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="buyRelicBtn">Buy Selected</button>
-        <button class="btn primary" id="equipRelicBtn">Equip Selected</button>
+        <button class="btn" style="background:var(--accent)" id="equipRelicBtn">Equip Selected</button>
       </div>
 
       <div class="list" id="relicList"></div>
@@ -341,17 +396,7 @@
 
 <script>
 /* =========================
-   Startup image check (shows alert if missing)
-========================= */
-(function checkTownImage(){
-  const img = new Image();
-  img.onload = () => console.log("town.jpg loaded OK");
-  img.onerror = () => alert("ERROR: town.jpg not found. Make sure town.jpg is next to index.html and the name is EXACT (lowercase).");
-  img.src = "town.jpg?v=" + Date.now(); // cache-bust
-})();
-
-/* =========================
-   OPTIONAL debug hitzones
+   OPTIONAL: show tap zones while aligning
 ========================= */
 const DEBUG_HOTSPOTS = false;
 if (DEBUG_HOTSPOTS){
@@ -359,9 +404,22 @@ if (DEBUG_HOTSPOTS){
 }
 
 /* =========================
+   Warn if town.jpg or battle.jpg isn't loading
+========================= */
+(function checkImages(){
+  const t = new Image();
+  t.onerror = ()=>alert("town.jpg NOT FOUND. Must be next to index.html and named exactly town.jpg");
+  t.src = "town.jpg?v=" + Date.now();
+
+  const b = new Image();
+  b.onerror = ()=>alert("battle.jpg NOT FOUND. Must be next to index.html and named exactly battle.jpg");
+  b.src = "battle.jpg?v=" + Date.now();
+})();
+
+/* =========================
    Helpers + Core
 ========================= */
-const SAVE_KEY="ninja_town_rpg_actions_v4_img";
+const SAVE_KEY="ninja_town_rpg_v5_labels";
 const $ = (id)=>document.getElementById(id);
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function rand(a,b){ return a + Math.random()*(b-a); }
@@ -414,7 +472,6 @@ function makeNinja(name=null){
     hp:70, maxHP:70
   };
 }
-
 function defaultSave(){
   const starter=makeNinja("Andy Holloway");
   return {
@@ -482,7 +539,6 @@ function belt(){ return beltFromXP(activeNinja().xp); }
 /* UI */
 function openModal(id){ $(id).classList.remove("hidden"); }
 function closeModal(id){ $(id).classList.add("hidden"); }
-
 function refreshTop(){
   for(const n of save.ninjas) recalcNinja(save,n);
   const a=activeNinja();
@@ -569,7 +625,7 @@ function renderRoster(){
         </div>
         <div class="muted">STR ${n._derived.STR} • AGI ${n._derived.AGI} • END ${n._derived.END} • HP ${n.hp}/${n.maxHP}</div>
       </div>
-      <button class="btn small ghost" data-sel="${n.id}">${selected?"Selected":"Select"}</button>
+      <button class="btn ghost" style="padding:8px 10px" data-sel="${n.id}">${selected?"Selected":"Select"}</button>
     `;
     list.appendChild(row);
   }
@@ -600,13 +656,13 @@ $("setActiveBtn").onclick=()=>{
 };
 $("closeRecruit").onclick=()=>closeModal("recruitModal");
 
-/* Weapon Shop */
-let weaponSelectedId=null;
+/* Weapon shop + Relic shop (kept same logic, opened from building taps) */
+let weaponSelectedId=null, relicSelectedId=null;
 function renderWeaponShop(){
   if(!save.shop.weapons?.length){
     save.shop.weapons = Array.from({length:6}, ()=>makeWeapon(rollRarity(save.ladder.tier)));
   }
-  const list=$("weaponList"); list.innerHTML="";
+  const list=document.getElementById("weaponList"); list.innerHTML="";
   for(const w of save.shop.weapons){
     const selected = w.id===weaponSelectedId;
     const owned = save.inventory.weapons.some(x=>x.id===w.id);
@@ -621,7 +677,7 @@ function renderWeaponShop(){
         </div>
         <div class="muted">+STR ${w.bonus.str} • +AGI ${w.bonus.agi} • +END ${w.bonus.end}</div>
       </div>
-      <button class="btn small ghost" data-wsel="${w.id}">${selected?"Selected":"Select"}</button>
+      <button class="btn ghost" style="padding:8px 10px" data-wsel="${w.id}">${selected?"Selected":"Select"}</button>
     `;
     list.appendChild(row);
   }
@@ -633,6 +689,38 @@ function renderWeaponShop(){
   $("buyWeaponBtn").disabled = !sel || save.currency.gold < sel.cost || save.inventory.weapons.some(x=>x.id===sel.id);
   $("equipWeaponBtn").disabled = !sel || !save.inventory.weapons.some(x=>x.id===sel.id);
 }
+function renderRelicShop(){
+  if(!save.shop.relics?.length){
+    save.shop.relics = Array.from({length:6}, ()=>makeRelic(rollRarity(save.ladder.tier)));
+  }
+  const list=document.getElementById("relicList"); list.innerHTML="";
+  for(const r of save.shop.relics){
+    const selected = r.id===relicSelectedId;
+    const owned = save.inventory.relics.some(x=>x.id===r.id);
+    const row=document.createElement("div");
+    row.className="item";
+    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
+    row.innerHTML=`
+      <div style="min-width:0">
+        <div style="font-weight:1000">
+          ${r.name} <span class="pill rar ${r.rarity}">${r.rarity}</span>
+          <span class="pill">☯ ${r.cost}</span> ${owned?`<span class="pill">OWNED</span>`:""}
+        </div>
+        <div class="muted">+STR ${r.bonus.str} • +AGI ${r.bonus.agi} • +END ${r.bonus.end}</div>
+      </div>
+      <button class="btn ghost" style="padding:8px 10px" data-rsel="${r.id}">${selected?"Selected":"Select"}</button>
+    `;
+    list.appendChild(row);
+  }
+  list.querySelectorAll("button[data-rsel]").forEach(b=>{
+    b.onclick=()=>{ relicSelectedId=b.getAttribute("data-rsel"); renderRelicShop(); };
+  });
+
+  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
+  $("buyRelicBtn").disabled = !sel || save.currency.karma < sel.cost || save.inventory.relics.some(x=>x.id===sel.id);
+  $("equipRelicBtn").disabled = !sel || !save.inventory.relics.some(x=>x.id===sel.id);
+}
+
 $("buyWeaponBtn").onclick=()=>{
   const sel = save.shop.weapons.find(x=>x.id===weaponSelectedId) || null;
   if(!sel) return;
@@ -653,39 +741,6 @@ $("equipWeaponBtn").onclick=()=>{
 };
 $("closeWeapon").onclick=()=>closeModal("weaponModal");
 
-/* Relic Shop */
-let relicSelectedId=null;
-function renderRelicShop(){
-  if(!save.shop.relics?.length){
-    save.shop.relics = Array.from({length:6}, ()=>makeRelic(rollRarity(save.ladder.tier)));
-  }
-  const list=$("relicList"); list.innerHTML="";
-  for(const r of save.shop.relics){
-    const selected = r.id===relicSelectedId;
-    const owned = save.inventory.relics.some(x=>x.id===r.id);
-    const row=document.createElement("div");
-    row.className="item";
-    row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
-      <div style="min-width:0">
-        <div style="font-weight:1000">
-          ${r.name} <span class="pill rar ${r.rarity}">${r.rarity}</span>
-          <span class="pill">☯ ${r.cost}</span> ${owned?`<span class="pill">OWNED</span>`:""}
-        </div>
-        <div class="muted">+STR ${r.bonus.str} • +AGI ${r.bonus.agi} • +END ${r.bonus.end}</div>
-      </div>
-      <button class="btn small ghost" data-rsel="${r.id}">${selected?"Selected":"Select"}</button>
-    `;
-    list.appendChild(row);
-  }
-  list.querySelectorAll("button[data-rsel]").forEach(b=>{
-    b.onclick=()=>{ relicSelectedId=b.getAttribute("data-rsel"); renderRelicShop(); };
-  });
-
-  const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
-  $("buyRelicBtn").disabled = !sel || save.currency.karma < sel.cost || save.inventory.relics.some(x=>x.id===sel.id);
-  $("equipRelicBtn").disabled = !sel || !save.inventory.relics.some(x=>x.id===sel.id);
-}
 $("buyRelicBtn").onclick=()=>{
   const sel = save.shop.relics.find(x=>x.id===relicSelectedId) || null;
   if(!sel) return;
@@ -706,7 +761,9 @@ $("equipRelicBtn").onclick=()=>{
 };
 $("closeRelic").onclick=()=>closeModal("relicModal");
 
-/* Battle */
+/* =========================
+   Battle (same battle logic)
+========================= */
 const battleEl = $("battle");
 const townEl = $("town");
 function showBattle(v){
@@ -723,6 +780,7 @@ function resize(){
 }
 window.addEventListener("resize", resize);
 resize();
+
 function hpFill(el, cur, max){ el.style.width = `${clamp(cur/max,0,1)*100}%`; }
 function roundRect(x,y,w,h,r,fill){
   const rr=Math.min(r,w/2,h/2);
@@ -735,8 +793,7 @@ function roundRect(x,y,w,h,r,fill){
   if(fill) ctx.fill();
 }
 function drawNinja(x,y,flip=false,weapon="katana"){
-  ctx.save();
-  ctx.translate(x,y);
+  ctx.save(); ctx.translate(x,y);
   if(flip) ctx.scale(-1,1);
 
   ctx.fillStyle="#111";
@@ -763,8 +820,7 @@ const floatTexts=[]; let dust=null;
 function addFloatText(text,x,y,color="#ff3a3a"){ floatTexts.push({text,x,y,vy:-0.65,t:0,color}); }
 function drawFloatTexts(){
   for(const ft of floatTexts){
-    ft.t += 1;
-    ft.y += ft.vy;
+    ft.t += 1; ft.y += ft.vy;
     ctx.globalAlpha = clamp(1 - ft.t/60, 0, 1);
     ctx.fillStyle = ft.color;
     ctx.font="900 16px system-ui";
@@ -935,19 +991,21 @@ async function startBattle(){
 }
 $("skipBtn").onclick=()=>{ skip=true; };
 
-/* Building taps = real actions */
-$("hsDojo").onclick=()=>{ renderDojo(); openModal("dojoModal"); };
+/* =========================
+   Tie buildings to actions
+========================= */
 $("hsDaimyo").onclick=()=>{ renderDaimyo(); openModal("daiModal"); };
-$("hsRecruit").onclick=()=>{ rosterSelectedId = save.activeNinjaId; renderRoster(); openModal("recruitModal"); };
-$("hsWeapon").onclick=()=>{ weaponSelectedId = save.shop.weapons?.[0]?.id || null; renderWeaponShop(); openModal("weaponModal"); };
 $("hsRelic").onclick=()=>{ relicSelectedId = save.shop.relics?.[0]?.id || null; renderRelicShop(); openModal("relicModal"); };
+$("hsWeapon").onclick=()=>{ weaponSelectedId = save.shop.weapons?.[0]?.id || null; renderWeaponShop(); openModal("weaponModal"); };
+$("hsRecruit").onclick=()=>{ rosterSelectedId = save.activeNinjaId; renderRoster(); openModal("recruitModal"); };
 $("hsHospital").onclick=()=>{ const a=activeNinja(); recalcNinja(save,a); a.hp=a.maxHP; persist(); refreshTop(); };
+$("hsDojo").onclick=()=>{ renderDojo(); openModal("dojoModal"); };
 $("hsFight").onclick=()=>startBattle();
 
 /* Init */
 persist();
 refreshTop();
-console.log("Loaded v4-ACTIONS-IMG");
+console.log("Loaded v5-TOWN-LABELS");
 </script>
 
 </body>
