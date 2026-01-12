@@ -1531,26 +1531,43 @@ function endBattle(victory){
   battleState.over = true;
   battleState.victory = victory;
 
-  const rewardGold  = victory ? (120 + battleState.enemyStart*35) : 40;
-  const rewardKarma = victory ? (25 + battleState.enemyStart*8)  : 10;
+  const rewardGold  = victory ? (120 + battleState.enemyStart * 35) : 40;
+  const rewardKarma = victory ? (25  + battleState.enemyStart * 8)  : 10;
+
   save.currency.gold  += rewardGold;
   save.currency.karma += rewardKarma;
 
+  let tpAward = 0;
+
+  if (victory) {
+    const tpPerEnemy = 1;
+    tpAward = battleState.enemyStart * tpPerEnemy + 2; // leader bonus
+
+    const active = activeNinja();
+    active.tp += tpAward;
+
+    // Small TP to surviving clan members
+    for (const n of battleState.your) {
+      if (n.id !== active.id && n.hp > 0) {
+        n.tp += 1;
+      }
+    }
+  }
+
   save.meta.wins   = save.meta.wins   || 0;
   save.meta.losses = save.meta.losses || 0;
-  if(victory) save.meta.wins++;
-  else save.meta.losses++;
+  victory ? save.meta.wins++ : save.meta.losses++;
 
   battleLogPush(
     victory
-      ? `🏁 Victory! Rewards: 🪙${rewardGold}, ☯${rewardKarma}`
+      ? `🏁 Victory! Rewards: 🪙${rewardGold}, ☯${rewardKarma}, +${tpAward} TP`
       : `🏁 Defeat… Consolation: 🪙${rewardGold}, ☯${rewardKarma}`
   );
 
-  // Ensure auto is OFF at end (button disabled), but next battle starts ON
   battleAutoOn = false;
 
-  persist(); refreshTop();
+  persist();
+  refreshTop();
   renderBattleHUD();
 }
 
