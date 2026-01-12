@@ -1344,7 +1344,7 @@ function makeScoutEnemy(){
   return [ makeEnemyNinja({ name:"Scout", str:1, agi:1, end:1, isBoss:false }) ];
 }
 
-function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 40); }
+function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 60); }
 
 function genEnemyClan(difficulty){
   if(difficulty === "easy") return makeScoutEnemy();
@@ -1363,11 +1363,11 @@ function genEnemyClan(difficulty){
   );
 
 const statBase =
-  difficulty==="medium" ? avgLv*0.75 :
-  difficulty==="hard"   ? avgLv*1.05 :
+  difficulty==="medium" ? avgLv*0.8 :
+  difficulty==="hard"   ? avgLv*1.15 :
   avgLv*0.75;
 
-const pool = statBase * 1.8;
+const pool = statBase * 2.3;
 
 const clan=[];
 for(let i=0;i<size;i++){
@@ -1390,7 +1390,7 @@ function makeBossEnemy(){
   const baseEnd=1+each;
 
   const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
-  boss.base.str += 6; boss.base.agi += 6; boss.base.end += 2;
+  boss.base.str += 6; boss.base.agi += 6; boss.base.end += 20;
   recalc(boss); boss.hp=boss.maxHP;
   boss.isBoss=true;
   return [boss];
@@ -1576,7 +1576,7 @@ function endBattle(victory){
 
   if (victory) {
     const tpPerEnemy = 1;
-    tpAward = battleState.enemyStart * tpPerEnemy + 2; // leader bonus
+    tpAward = battleState.enemyStart * tpPerEnemy + 1; // leader bonus
 
     const active = activeNinja();
     active.tp += tpAward;
