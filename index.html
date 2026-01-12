@@ -1214,125 +1214,47 @@ $("dailyBtn").onclick=()=>{
 };
 
 /* ======================================================
-   BATTLE ENGINE — AUTO BATTLE + CANVAS ANIMATIONS + HEALTH BARS
-   Drop-in replacement for your current battle engine section.
-
-   Requires existing DOM:
-   - #battleCanvas (960x560)
-   - #bhLeft #bhMid #bhRight (top panels)
-   - #battleTitle #battleSub #battleText (log area)
-   - #battleAutoBtn #battleRetreatBtn (buttons)
-   - #battleSelectModal #battleList + close button id #closeBattleSelect
-
-   NOTES / FIXES INCLUDED:
-   - Fully auto-battle (no "Next" required)
-   - Animated fighters on canvas (idle, lunge, hit flash, KO fade)
-   - Health bars at top (stacked per living ninja)
-   - Battle log renders with line breaks (white-space fix applied in JS)
-   - Scout clan is EXACTLY: 1 White belt enemy with 1/1/1 stats
+   BATTLE ENGINE — SINGLE DROP-IN REPLACEMENT (COPY/PASTE)
+   Fixes:
+   - Battle works repeatedly (sequence resets every battle + RAF always running)
+   - Auto can pause/resume properly
+   - Ninjas look more like ninjas (mask + eyes + headband)
+   - Fighters run MUCH closer to target when striking
+   Requires DOM ids (already in your file):
+     #battleCanvas, #bhLeft #bhMid #bhRight
+     #battleTitle #battleSub #battleText
+     #battleAutoBtn #battleRetreatBtn
+     #battleSelectModal #battleList #closeBattleSelect
+     #town #battle
 ====================================================== */
 
 let battleState = null;
-let battleAutoTimer = null;
-
 let battleRAF = 0;
 let battleLastT = 0;
+
+// “Auto” is true by default per your design
+let battleAutoOn = true;
+
 let battleCanvas = null;
 let bctx = null;
 
-// ---- tiny helpers (uses your existing clamp/rand/rint/pick/recalc/makeNinja/persist/refreshTop) ----
 const lerp = (a,b,t)=>a+(b-a)*t;
 const easeOut = (t)=>1-Math.pow(1-t,3);
 const easeInOut = (t)=>t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
 
-// ---------- Enemy creation ----------
-function makeEnemyNinja(template){
-  const n = makeNinja(template?.name || null);
-  n.tp = 0;
-  n.base.str = template.str;
-  n.base.agi = template.agi;
-  n.base.end = template.end;
-  n.equip.weaponId = null;
-  n.equip.relicId  = null;
-  n.hp = null;
-  recalc(n);
-  n.hp = n.maxHP;
-  n.isEnemy = true;
-  n.isBoss  = !!template?.isBoss;
-  return n;
+// ---------- init renderer (safe) ----------
+function initBattleRenderer(){
+  battleCanvas = document.getElementById("battleCanvas");
+  if(!battleCanvas) return;
+  bctx = battleCanvas.getContext("2d");
 }
 
-function makeScoutEnemy(){
-  // EXACT request: 1 white belt ninja, 1/1/1
-  return [ makeEnemyNinja({ name:"Scout", str:1, agi:1, end:1, isBoss:false }) ];
-}
-
-function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 40); }
-
-function genEnemyClan(difficulty){
-  if(difficulty === "easy") return makeScoutEnemy(); // Scout clan override
-
-  const yourCount = save.ninjas.length;
-  const base =
-    difficulty==="medium" ? rint(3,5) :
-    difficulty==="hard"   ? rint(4,7) :
-    rint(2,4);
-
-  const size = clamp(base + rint(-1,1) + Math.floor(yourCount*0.25), 1, 10);
-
-  // stats scale with your average level
-  const avgLv = Math.max(
-    1,
-    Math.round(save.ninjas.reduce((s,n)=>{ recalc(n); return s+n.level; },0) / save.ninjas.length)
-  );
-
-  const statBase =
-    difficulty==="medium" ? avgLv*0.85 :
-    difficulty==="hard"   ? avgLv*1.05 :
-    avgLv*0.75;
-
-  const clan=[];
-  for(let i=0;i<size;i++){
-    const spread=[1+rand(-0.15,0.25),1+rand(-0.15,0.25),1+rand(-0.15,0.25)];
-    const sum=spread[0]+spread[1]+spread[2];
-    const s=clampEnemyStat((statBase*3)*(spread[0]/sum));
-    const a=clampEnemyStat((statBase*3)*(spread[1]/sum));
-    const e=clampEnemyStat((statBase*3)*(spread[2]/sum));
-    clan.push(makeEnemyNinja({str:s, agi:a, end:e}));
-  }
-  return clan;
-}
-
-function makeBossEnemy(){
-  const spent=80;
-  const each=Math.floor(spent/3); // 26
-  const rem=spent - each*3;       // 2
-  const baseStr=1+each + (rem>0?1:0);
-  const baseAgi=1+each + (rem>1?1:0);
-  const baseEnd=1+each;
-
-  const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
-  // baked-in “legendary-ish” power
-  boss.base.str += 6; boss.base.agi += 6; boss.base.end += 2;
-  recalc(boss); boss.hp=boss.maxHP;
-  boss.isBoss=true;
-  return [boss];
-}
-
-// ---------- Your team ----------
-function battleTeamYour(){
-  return save.ninjas.map(n=>{
-    recalc(n);
-    n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
-    n.isEnemy=false;
-    n.isBoss=false;
-    return n;
-  });
-}
-
-// ---------- combat helpers ----------
+// ---------- helpers ----------
 function living(team){ return team.filter(n=>n.hp>0); }
-function pickTarget(team){ const alive=living(team); return alive.length?pick(alive):null; }
+function pickTarget(team){
+  const alive=living(team);
+  return alive.length ? pick(alive) : null;
+}
 
 function rollHit(att, def){
   const dodge = def.derived.dodge;
@@ -1364,47 +1286,124 @@ function buildTurnOrder(){
 function battleLogPush(line){
   if(!battleState) return;
   battleState.log.push(line);
-  if(battleState.log.length>140) battleState.log.shift();
-  renderBattleHUD(); // keep log visible during auto
+  if(battleState.log.length>160) battleState.log.shift();
+  renderBattleHUD();
 }
 
-// ---------- animation model ----------
+// ---------- enemy creation ----------
+function makeEnemyNinja(template){
+  const n = makeNinja(template?.name || null);
+  n.tp = 0;
+  n.base.str = template.str;
+  n.base.agi = template.agi;
+  n.base.end = template.end;
+  n.equip.weaponId = null;
+  n.equip.relicId  = null;
+  n.hp = null;
+  recalc(n);
+  n.hp = n.maxHP;
+  n.isEnemy = true;
+  n.isBoss  = !!template?.isBoss;
+  return n;
+}
+
+function makeScoutEnemy(){
+  return [ makeEnemyNinja({ name:"Scout", str:1, agi:1, end:1, isBoss:false }) ];
+}
+
+function clampEnemyStat(v){ return clamp(Math.floor(v), 1, 40); }
+
+function genEnemyClan(difficulty){
+  if(difficulty === "easy") return makeScoutEnemy();
+
+  const yourCount = save.ninjas.length;
+  const base =
+    difficulty==="medium" ? rint(3,5) :
+    difficulty==="hard"   ? rint(4,7) :
+    rint(2,4);
+
+  const size = clamp(base + rint(-1,1) + Math.floor(yourCount*0.25), 1, 10);
+
+  const avgLv = Math.max(
+    1,
+    Math.round(save.ninjas.reduce((s,n)=>{ recalc(n); return s+n.level; },0) / save.ninjas.length)
+  );
+
+  const statBase =
+    difficulty==="medium" ? avgLv*0.85 :
+    difficulty==="hard"   ? avgLv*1.05 :
+    avgLv*0.75;
+
+  const clan=[];
+  for(let i=0;i<size;i++){
+    const spread=[1+rand(-0.15,0.25),1+rand(-0.15,0.25),1+rand(-0.15,0.25)];
+    const sum=spread[0]+spread[1]+spread[2];
+    const s=clampEnemyStat((statBase*3)*(spread[0]/sum));
+    const a=clampEnemyStat((statBase*3)*(spread[1]/sum));
+    const e=clampEnemyStat((statBase*3)*(spread[2]/sum));
+    clan.push(makeEnemyNinja({str:s, agi:a, end:e}));
+  }
+  return clan;
+}
+
+function makeBossEnemy(){
+  const spent=80;
+  const each=Math.floor(spent/3);
+  const rem=spent - each*3;
+  const baseStr=1+each + (rem>0?1:0);
+  const baseAgi=1+each + (rem>1?1:0);
+  const baseEnd=1+each;
+
+  const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
+  boss.base.str += 6; boss.base.agi += 6; boss.base.end += 2;
+  recalc(boss); boss.hp=boss.maxHP;
+  boss.isBoss=true;
+  return [boss];
+}
+
+// ---------- your team ----------
+function battleTeamYour(){
+  return save.ninjas.map(n=>{
+    recalc(n);
+    n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
+    n.isEnemy=false;
+    n.isBoss=false;
+    return n;
+  });
+}
+
+/* ============================
+   VISUAL MODEL (closer run + mask)
+============================ */
 function makeFighterVisual(n, side, idx){
-  // side: "L" (your) or "R" (enemy)
-  const lane = idx;
-  const x = side==="L" ? 220 : 740;
-  const y = 210 + lane*75;
+  const x = side==="L" ? 210 : 750;
+  const y = 210 + idx*75;
 
   return {
     id: n.id,
     side,
-    lane,
-    baseX:x, baseY:y,
+    lane: idx,
+    baseX: x, baseY: y,
     x, y,
     bob: rand(0, Math.PI*2),
-    lunge: 0,    // 0..1
-    hitFlash: 0, // 0..1
-    koFade: 0,   // 0..1
-    hpPulse: 0,  // 0..1
-    floating: [], // {text, x,y, vy, life, crit}
+    run: 0,        // 0..1 how “forward” they are in current strike
+    hitFlash: 0,   // 0..1
+    koFade: 0,     // 0..1
+    hpPulse: 0,    // 0..1
+    floating: [],
   };
 }
 
 function syncVisuals(){
-  // rebuild visuals if roster size changes
   battleState.visuals = battleState.visuals || { L:[], R:[] };
 
-  const yAlive = battleState.your;
-  const eAlive = battleState.enemy;
-
-  battleState.visuals.L = yAlive.map((n,i)=> {
+  battleState.visuals.L = battleState.your.map((n,i)=>{
     return battleState.visuals.L.find(v=>v.id===n.id) || makeFighterVisual(n,"L",i);
   });
-  battleState.visuals.R = eAlive.map((n,i)=> {
+  battleState.visuals.R = battleState.enemy.map((n,i)=>{
     return battleState.visuals.R.find(v=>v.id===n.id) || makeFighterVisual(n,"R",i);
   });
 
-  // keep lanes aligned
   battleState.visuals.L.forEach((v,i)=>{ v.lane=i; v.baseY=210+i*75; });
   battleState.visuals.R.forEach((v,i)=>{ v.lane=i; v.baseY=210+i*75; });
 }
@@ -1414,15 +1413,16 @@ function visFor(n){
   return arr.find(v=>v.id===n.id) || null;
 }
 
-// ---------- action queue (auto stepping with timing) ----------
+/* ============================
+   ACTION QUEUE (resets every battle)
+============================ */
 function enqueueAction(actor, target){
   const act = {
     actorId: actor.id,
     targetId: target?.id || null,
     t: 0,
-    phase: "windup", // windup -> strike -> recover
-    duration: 0.65,  // seconds
-    done: false,
+    didHit: false,
+    duration: 0.78, // slightly longer to showcase “run close”
   };
   battleState.queue.push(act);
 }
@@ -1448,9 +1448,7 @@ function planNextRoundIfNeeded(){
 
 function stepAction(dt){
   if(!battleState || battleState.over) return;
-
   if(battleState.queue.length===0){
-    // end-of-round bookkeeping
     battleState.round++;
     planNextRoundIfNeeded();
     return;
@@ -1461,7 +1459,6 @@ function stepAction(dt){
   const target = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.targetId) || null;
 
   if(!actor || actor.hp<=0 || !target || target.hp<=0){
-    // invalid action (someone died)
     battleState.queue.shift();
     return;
   }
@@ -1472,59 +1469,65 @@ function stepAction(dt){
   act.t += dt;
   const p = clamp(act.t / act.duration, 0, 1);
 
-  // animate lunge
-  if(va){
-    if(p < 0.35){
-      va.lunge = easeOut(p/0.35) * 0.9;
-    }else if(p < 0.55){
-      va.lunge = 0.9;
-    }else{
-      va.lunge = (1 - easeOut((p-0.55)/0.45)) * 0.9;
-    }
+  // RUN CLOSE: move actor near the target (not just small lunge)
+  // Approach to a “strike distance” near target x.
+  if(va && vt){
+    const dir = (va.side==="L") ? 1 : -1;
+    const strikeDist = 92; // smaller = closer; 92 looks like “right up on them”
+    const endX = vt.baseX - dir*strikeDist;
+
+    // Run forward for first ~55% of action, then retreat
+    const runT = (p < 0.55) ? easeOut(p/0.55) : (1 - easeOut((p-0.55)/0.45));
+    va.run = clamp(runT, 0, 1);
+
+    va.x = lerp(va.baseX, endX, va.run);
   }
 
-  // apply damage at the "strike" moment once
-  if(!act.didHit && p >= 0.42){
+  // apply damage at strike moment
+  if(!act.didHit && p >= 0.52){
     act.didHit = true;
 
     const res = dealDamage(actor, target, 1);
 
     const an = actor.isBoss ? "👹 Boss" : (actor.isEnemy ? "Enemy" : actor.name);
-    const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Your Ninja") : target.name;
+    const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Enemy") : target.name;
 
     if(res.dodged){
       battleLogPush(`${an} attacks → ${tn} dodges!`);
       if(vt){
-        vt.floating.push({ text:"DODGE", x:vt.x, y:vt.y-30, vy:-22, life:0.9, crit:false });
+        vt.floating.push({ text:"DODGE", x:vt.x, y:vt.y-32, vy:-26, life:0.9, crit:false });
       }
     }else{
       battleLogPush(`${an} hits ${tn} for ${res.dmg}${res.crit?" (CRIT)":"."}`);
-
       if(vt){
         vt.hitFlash = 1;
         vt.hpPulse = 1;
-        vt.floating.push({ text:`-${res.dmg}`, x:vt.x, y:vt.y-34, vy:-26, life:0.95, crit:res.crit });
+        vt.floating.push({ text:`-${res.dmg}`, x:vt.x, y:vt.y-36, vy:-30, life:0.95, crit:res.crit });
       }
       if(target.hp<=0){
         battleLogPush(`💀 ${tn} is down!`);
-        if(vt) vt.koFade = 0.001; // start fade
+        if(vt) vt.koFade = 0.001;
       }
     }
 
-    // win/lose checks right after hit
     if(living(battleState.enemy).length===0){ endBattle(true); return; }
     if(living(battleState.your).length===0){ endBattle(false); return; }
   }
 
-  // finish action
   if(p >= 1){
+    // reset actor run so next action starts clean
+    if(va) va.run = 0;
     battleState.queue.shift();
   }
 }
 
-// ---------- End / rewards ----------
+/* ============================
+   END / REWARDS + HARD RESET
+============================ */
 function endBattle(victory){
   if(!battleState) return;
+  if(battleState.over) return;
+
   battleState.over = true;
   battleState.victory = victory;
 
@@ -1544,22 +1547,34 @@ function endBattle(victory){
       : `🏁 Defeat… Consolation: 🪙${rewardGold}, ☯${rewardKarma}`
   );
 
-  stopBattleAuto();
+  // Ensure auto is OFF at end (button disabled), but next battle starts ON
+  battleAutoOn = false;
+
   persist(); refreshTop();
   renderBattleHUD();
 }
 
-// ---------- Start / leave ----------
+/* ============================
+   START / LEAVE (FIXES “one battle then dead”)
+============================ */
+function resetBattleRuntime(){
+  // This is the key fix: new battle must reset runtime counters and queue visuals cleanly
+  battleLastT = 0;
+  battleAutoOn = true; // auto starts ON each new battle
+}
+
 function startBattle(kind){
-  stopBattleAuto();
   initBattleRenderer();
+  resetBattleRuntime();
 
   const your  = battleTeamYour();
-  const enemy = (kind==="boss") ? makeBossEnemy()
-              : (kind==="hard") ? genEnemyClan("hard")
-              : (kind==="medium") ? genEnemyClan("medium")
-              : genEnemyClan("easy"); // scout override is inside genEnemyClan
+  const enemy =
+    (kind==="boss")   ? makeBossEnemy()
+  : (kind==="hard")   ? genEnemyClan("hard")
+  : (kind==="medium") ? genEnemyClan("medium")
+  : genEnemyClan("easy");
 
+  // HARD RESET STATE
   battleState = {
     kind,
     round: 1,
@@ -1576,47 +1591,48 @@ function startBattle(kind){
   syncVisuals();
   planNextRoundIfNeeded();
 
-  $("town").classList.add("hidden");
-  $("battle").classList.remove("hidden");
+  document.getElementById("town")?.classList.add("hidden");
+  document.getElementById("battle")?.classList.remove("hidden");
 
   renderBattleHUD();
-  startBattleAuto(); // auto starts immediately (your request)
+
+  // Ensure RAF loop is running (forever). This fixes “after first battle nothing happens”.
+  if(!battleRAF) battleRAF = requestAnimationFrame(battleLoop);
 }
 
 function leaveBattle(){
-  stopBattleAuto();
+  // Do NOT cancel RAF. Keep it running so next battle animates.
   battleState = null;
-  cancelAnimationFrame(battleRAF);
-  battleRAF = 0;
 
-  $("battle").classList.add("hidden");
-  $("town").classList.remove("hidden");
+  document.getElementById("battle")?.classList.add("hidden");
+  document.getElementById("town")?.classList.remove("hidden");
 }
 
-// ---------- HUD + log (includes white-space fix) ----------
+/* ============================
+   HUD + LOG + AUTO TOGGLE (REAL PAUSE)
+============================ */
 function renderBattleHUD(){
   if(!battleState) return;
 
   const yAlive = living(battleState.your).length;
   const eAlive = living(battleState.enemy).length;
 
-  $("bhLeft").textContent  = `Your: ${yAlive}/${battleState.your.length}`;
-  $("bhMid").textContent   = `Round ${battleState.round} • ${battleState.kind.toUpperCase()}`;
-  $("bhRight").textContent = `Enemy: ${eAlive}/${battleState.enemy.length}`;
+  document.getElementById("bhLeft").textContent  = `Your: ${yAlive}/${battleState.your.length}`;
+  document.getElementById("bhMid").textContent   = `Round ${battleState.round} • ${battleState.kind.toUpperCase()}`;
+  document.getElementById("bhRight").textContent = `Enemy: ${eAlive}/${battleState.enemy.length}`;
 
-  $("battleTitle").textContent = battleState.over
+  document.getElementById("battleTitle").textContent = battleState.over
     ? (battleState.victory ? "Victory!" : "Defeat…")
     : "Battle";
 
-  $("battleSub").textContent =
+  document.getElementById("battleSub").textContent =
     `Your ${battleState.your.length} vs Enemy ${battleState.enemy.length} (start ${battleState.enemyStart})`;
 
-  const bt = $("battleText");
-  // WHITE-SPACE UI FIX (so \n shows as new lines)
+  const bt = document.getElementById("battleText");
   bt.style.whiteSpace = "pre-line";
   bt.textContent = (battleState.log.slice(-8).join("\n")) || "—";
 
-  // Next is not needed anymore; disable if it exists
+  // Hide/disable Next (engine is auto-driven)
   const nextBtn = document.getElementById("battleNextBtn");
   if(nextBtn){
     nextBtn.disabled = true;
@@ -1626,88 +1642,46 @@ function renderBattleHUD(){
   const autoBtn = document.getElementById("battleAutoBtn");
   if(autoBtn){
     autoBtn.disabled = battleState.over;
-    autoBtn.textContent = battleAutoTimer ? "Auto: ON" : "Auto";
+    autoBtn.textContent = battleState.over ? "Auto" : (battleAutoOn ? "Auto: ON" : "Auto: OFF");
   }
-
-  if(battleState.over) stopBattleAuto();
 }
 
-// ---------- Auto loop ----------
-function startBattleAuto(){
-  if(!battleState || battleState.over) return;
-  if(battleAutoTimer) return;
-  battleAutoTimer = setInterval(()=>{
-    // the actual stepping is done in RAF (smooth), but this is a safety heartbeat
-    if(!battleState || battleState.over) stopBattleAuto();
-  }, 500);
-  renderBattleHUD();
-}
-
-function stopBattleAuto(){
-  if(battleAutoTimer){
-    clearInterval(battleAutoTimer);
-    battleAutoTimer = null;
-  }
-  const btn = document.getElementById("battleAutoBtn");
-  if(btn) btn.textContent = "Auto";
-}
-
-// ---------- Renderer / animations ----------
-function initBattleRenderer(){
-  if(battleCanvas && bctx) return;
-  battleCanvas = $("battleCanvas");
-  bctx = battleCanvas.getContext("2d");
-}
-
+/* ============================
+   RENDERER (masked ninjas) + HEALTH STACKS
+============================ */
 function updateVisuals(dt){
   if(!battleState) return;
   syncVisuals();
 
   const updateOne = (n, v)=>{
-    // idle bob
-    v.bob += dt * 3.2;
-    const bobY = Math.sin(v.bob) * 2.5;
+    v.bob += dt * 3.0;
+    const bobY = Math.sin(v.bob) * 2.2;
 
-    // lunge shifts toward center
-    const dir = (v.side==="L") ? 1 : -1;
-    const lungeX = v.lunge * 34 * dir;
-
-    v.x = v.baseX + lungeX;
+    // if not actively running in an action, gently return x to baseX
+    if(v.run <= 0.0001){
+      v.x = lerp(v.x, v.baseX, clamp(dt*6.5, 0, 1));
+    }
     v.y = v.baseY + bobY;
 
-    // decay flashes
-    if(v.hitFlash>0) v.hitFlash = Math.max(0, v.hitFlash - dt*3.5);
-    if(v.hpPulse>0)  v.hpPulse  = Math.max(0, v.hpPulse  - dt*2.8);
+    if(v.hitFlash>0) v.hitFlash = Math.max(0, v.hitFlash - dt*3.6);
+    if(v.hpPulse>0)  v.hpPulse  = Math.max(0, v.hpPulse  - dt*3.0);
 
-    // KO fade if dead
-    if(n.hp<=0){
-      v.koFade = Math.min(1, (v.koFade||0) + dt*0.6);
-    }else{
-      v.koFade = 0;
-    }
+    if(n.hp<=0) v.koFade = Math.min(1, (v.koFade||0) + dt*0.6);
+    else v.koFade = 0;
 
-    // floating text
     v.floating = v.floating.filter(f=>f.life>0);
     for(const f of v.floating){
       f.life -= dt;
       f.y += f.vy*dt;
-      f.vy -= 18*dt; // slight gravity-ish
+      f.vy -= 22*dt;
     }
   };
 
-  battleState.your.forEach(n=>{
-    const v = visFor(n);
-    if(v) updateOne(n, v);
-  });
-  battleState.enemy.forEach(n=>{
-    const v = visFor(n);
-    if(v) updateOne(n, v);
-  });
+  battleState.your.forEach(n=>{ const v=visFor(n); if(v) updateOne(n,v); });
+  battleState.enemy.forEach(n=>{ const v=visFor(n); if(v) updateOne(n,v); });
 }
 
 function drawHealthStacks(){
-  if(!battleState) return;
-
   const ctx = bctx;
   const w = battleCanvas.width;
 
@@ -1722,27 +1696,22 @@ function drawHealthStacks(){
 
     alive.slice(0,5).forEach((n,i)=>{
       const y = 14 + i*(barH+gap);
-
       const pct = n.maxHP ? (n.hp/n.maxHP) : 0;
       const name = n.isBoss ? "Boss" : (n.isEnemy ? "Enemy" : n.name);
 
       const bx = alignRight ? (x0 - barW) : x0;
 
-      // back
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = "rgba(0,0,0,.35)";
       ctx.fillRect(bx, y, barW, barH);
 
-      // fill
       ctx.fillStyle = "rgba(255,255,255,.86)";
       ctx.fillRect(bx, y, Math.max(0, barW*pct), barH);
 
-      // outline
       ctx.strokeStyle = "rgba(0,0,0,.55)";
       ctx.lineWidth = 1;
       ctx.strokeRect(bx+0.5, y+0.5, barW-1, barH-1);
 
-      // text
       ctx.globalAlpha = 1;
       ctx.fillStyle = "rgba(0,0,0,.85)";
       ctx.font = "900 10px system-ui";
@@ -1758,7 +1727,18 @@ function drawHealthStacks(){
   drawStack(battleState.enemy, "R");
 }
 
-function drawFighter(n, v){
+function rr(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y, x+w,y+h, rr);
+  ctx.arcTo(x+w,y+h, x,y+h, rr);
+  ctx.arcTo(x,y+h, x,y, rr);
+  ctx.arcTo(x,y, x+w,y, rr);
+  ctx.closePath();
+}
+
+function drawMaskedNinja(n, v){
   const ctx = bctx;
   const dead = n.hp<=0;
 
@@ -1773,78 +1753,101 @@ function drawFighter(n, v){
   ctx.globalAlpha *= 0.55;
   ctx.fillStyle = "rgba(0,0,0,.35)";
   ctx.beginPath();
-  ctx.ellipse(v.x, v.y+26, 18, 6, 0, 0, Math.PI*2);
+  ctx.ellipse(v.x, v.y+28, 20, 6.5, 0, 0, Math.PI*2);
   ctx.fill();
+
   ctx.globalAlpha = Math.max(0, fade);
 
-  // body
-  const scale = 1 + pulse*0.05;
+  // pulse scale
+  const scale = 1 + pulse*0.06;
   ctx.translate(v.x, v.y);
   ctx.scale(scale, scale);
 
-  // colors
-  const isEnemy = n.isEnemy;
-  const baseCol = isEnemy ? "rgba(255,255,255,.90)" : "rgba(255,255,255,.92)";
-  const ink = isEnemy ? "rgba(0,0,0,.85)" : "rgba(0,0,0,.85)";
+  // base colors
+  const suit = "rgba(20,20,22,.95)";
+  const trim = "rgba(255,255,255,.82)";
+  const ink  = "rgba(0,0,0,.9)";
 
-  // hit flash tint
+  // hit flash burst
   if(flash>0){
-    ctx.fillStyle = `rgba(255,120,24,${0.35*flash})`;
+    ctx.fillStyle = `rgba(255,120,24,${0.32*flash})`;
     ctx.beginPath();
-    ctx.arc(0, 0, 26, 0, Math.PI*2);
+    ctx.arc(0, 0, 30, 0, Math.PI*2);
     ctx.fill();
   }
 
-  // head
-  ctx.fillStyle = baseCol;
+  // head (hood)
+  ctx.fillStyle = suit;
   ctx.beginPath();
-  ctx.arc(0,-18,10,0,Math.PI*2);
+  ctx.arc(0,-20,12,0,Math.PI*2);
   ctx.fill();
 
-  // mask/body
-  ctx.fillStyle = baseCol;
-  ctx.beginPath();
-  ctx.roundRect?.(-12,-8,24,24,8);
-  if(!ctx.roundRect){
-    // fallback
-    ctx.beginPath();
-    ctx.moveTo(-12,-8+8);
-    ctx.arcTo(-12,-8, -12+8,-8, 8);
-    ctx.arcTo(12,-8, 12,-8+8, 8);
-    ctx.arcTo(12,16, 12-8,16, 8);
-    ctx.arcTo(-12,16, -12,16-8, 8);
-    ctx.closePath();
-  }
+  // face area (mask)
+  ctx.fillStyle = "rgba(245,230,205,.95)";
+  rr(ctx,-8,-26,16,12,6);
   ctx.fill();
 
-  // outline
+  // mask band (covers lower face)
+  ctx.fillStyle = suit;
+  rr(ctx,-9,-20,18,10,5);
+  ctx.fill();
+
+  // eyes slit
+  ctx.fillStyle = ink;
+  rr(ctx,-7,-25,14,4,2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.65)";
+  ctx.fillRect(-5,-24,4,2);
+  ctx.fillRect( 1,-24,4,2);
+
+  // body
+  ctx.fillStyle = suit;
+  rr(ctx,-13,-8,26,28,10);
+  ctx.fill();
+
+  // headband
+  ctx.fillStyle = trim;
+  rr(ctx,-12,-30,24,5,3);
+  ctx.fill();
+
+  // arms
+  ctx.strokeStyle = suit;
+  ctx.lineWidth = 5.5;
+  ctx.lineCap = "round";
+  const dir = v.side==="L" ? 1 : -1;
+  ctx.beginPath(); ctx.moveTo(-10,-2); ctx.lineTo(-18*dir, 10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 10,-2); ctx.lineTo( 18*dir, 10); ctx.stroke();
+
+  // legs
+  ctx.fillStyle = suit;
+  rr(ctx,-11,18,9,10,5); ctx.fill();
+  rr(ctx,  2,18,9,10,5); ctx.fill();
+
+  // weapon (simple blade)
+  ctx.strokeStyle = trim;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(10*dir, 6);
+  ctx.lineTo(28*dir, -10);
+  ctx.stroke();
   ctx.strokeStyle = ink;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(0,-18,10,0,Math.PI*2);
+  ctx.moveTo(14*dir, 3);
+  ctx.lineTo(18*dir, 0);
   ctx.stroke();
 
-  // simple weapon line
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
-  const dir = v.side==="L" ? 1 : -1;
-  ctx.beginPath();
-  ctx.moveTo(10*dir, 2);
-  ctx.lineTo((22+v.lunge*6)*dir, -10);
-  ctx.stroke();
-
-  // name tag
+  // name tag (boss marker)
   ctx.globalAlpha *= 0.95;
   ctx.fillStyle = "rgba(0,0,0,.75)";
-  ctx.font = (n.isBoss ? "900 11px system-ui" : "900 10px system-ui");
+  ctx.font = (n.isBoss ? "1000 11px system-ui" : "900 10px system-ui");
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText(n.isBoss ? "BOSS" : (n.isEnemy ? "Enemy" : ""), 0, -28);
+  ctx.fillText(n.isBoss ? "BOSS" : "", 0, -34);
 
   ctx.restore();
 
-  // floating numbers
+  // floating text
   if(v.floating?.length){
     for(const f of v.floating){
       const a = clamp(f.life/0.95, 0, 1);
@@ -1863,14 +1866,11 @@ function drawBattle(){
   const ctx = bctx;
   ctx.clearRect(0,0,battleCanvas.width,battleCanvas.height);
 
-  // backdrop tint (so battle.jpg still shows through)
   ctx.fillStyle = "rgba(0,0,0,.12)";
   ctx.fillRect(0,0,battleCanvas.width,battleCanvas.height);
 
-  // health bars
   drawHealthStacks();
 
-  // mid line
   ctx.strokeStyle = "rgba(255,255,255,.10)";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -1878,68 +1878,74 @@ function drawBattle(){
   ctx.lineTo(battleCanvas.width/2, battleCanvas.height-24);
   ctx.stroke();
 
-  // fighters
   for(const n of battleState.your){
     const v = visFor(n);
-    if(v) drawFighter(n,v);
+    if(v) drawMaskedNinja(n,v);
   }
   for(const n of battleState.enemy){
     const v = visFor(n);
-    if(v) drawFighter(n,v);
+    if(v) drawMaskedNinja(n,v);
   }
 }
 
+/* ============================
+   MAIN LOOP (never stops)
+============================ */
 function battleLoop(ts){
-  if(!battleState){
-    battleRAF = requestAnimationFrame(battleLoop);
-    return;
+  if(!battleCanvas || !bctx){
+    initBattleRenderer();
   }
+  battleRAF = requestAnimationFrame(battleLoop);
+
+  if(!battleState || !battleCanvas || !bctx) return;
 
   const t = ts/1000;
   const dt = clamp((t - (battleLastT||t)), 0, 0.05);
   battleLastT = t;
 
-  // auto-battle always running until over
-  if(!battleState.over){
-    // ensure we have actions
+  // REAL auto pause/resume
+  if(!battleState.over && battleAutoOn){
     planNextRoundIfNeeded();
-    // advance one action smoothly
     stepAction(dt);
   }
 
   updateVisuals(dt);
   drawBattle();
-
-  battleRAF = requestAnimationFrame(battleLoop);
 }
 
-// ---------- Bind battle UI handlers (idempotent) ----------
-initBattleRenderer();
-if(!battleRAF) battleRAF = requestAnimationFrame(battleLoop);
+/* ============================
+   UI BINDINGS (overwrite-safe)
+============================ */
+(function bindBattleUI(){
+  // Start RAF once
+  initBattleRenderer();
+  if(!battleRAF) battleRAF = requestAnimationFrame(battleLoop);
 
-// Auto button now means "toggle auto pause" (auto starts ON)
-if(document.getElementById("battleAutoBtn")){
-  $("battleAutoBtn").onclick=()=>{
-    if(!battleState || battleState.over) return;
-    // pause = stop stepping actions (we'll just stop autoTimer as a flag)
-    if(battleAutoTimer){
-      stopBattleAuto(); // pause
-    }else{
-      startBattleAuto(); // resume
-    }
-    renderBattleHUD();
-  };
-}
+  const autoBtn = document.getElementById("battleAutoBtn");
+  if(autoBtn){
+    autoBtn.onclick = ()=>{
+      if(!battleState || battleState.over) return;
+      battleAutoOn = !battleAutoOn;
+      renderBattleHUD();
+    };
+  }
 
-if(document.getElementById("battleRetreatBtn")){
-  $("battleRetreatBtn").onclick=()=>leaveBattle();
-}
+  const retreatBtn = document.getElementById("battleRetreatBtn");
+  if(retreatBtn){
+    retreatBtn.onclick = ()=>leaveBattle();
+  }
 
-// ---------- Battle select modal (launches battles) ----------
-$("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
+  const closeSel = document.getElementById("closeBattleSelect");
+  if(closeSel){
+    closeSel.onclick = ()=>closeModal("battleSelectModal");
+  }
+})();
 
+/* ============================
+   BATTLE SELECT MODAL
+============================ */
 function renderBattleSelect(){
-  const list=$("battleList");
+  const list=document.getElementById("battleList");
   list.innerHTML="";
 
   const options=[
@@ -1970,6 +1976,10 @@ function renderBattleSelect(){
     };
   });
 }
+
+/* ======================================================
+   END BATTLE ENGINE REPLACEMENT
+====================================================== */
 
 /* ---------- Buildings ---------- */
 $("hsHospital").onclick=()=>{
