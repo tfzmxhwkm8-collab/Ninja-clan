@@ -2043,109 +2043,12 @@ try{
 }
     
 /* ======================================================
-   PART 4 — RECRUIT + WEAPON BALANCE + SHOP GENERATION + PROFILES
-   Adds: weapon stat ladder (+15/+15/+5 best), costs scale with total stats,
+   PART 4 — RECRUIT +  + SHOP GENERATION + PROFILES
+   Adds: 
          unique weapon looks (art), relic tuning, save slot UX polish,
          and fixes for common “undefined” crashes.
 ====================================================== */
 
-/* ---------- Safety: make sure meta/save keys exist ---------- */
-function ensureSaveIntegrity(){
-  save.meta ??= { wins:0, losses:0 };
-  save.currency ??= { gold:200, karma:50 };
-  save.daily ??= { lastClaim:0 };
-  save.inventory ??= { weapons:[], relics:[] };
-  save.shop ??= { weapons:[], relics:[] };
-  save.ninjas ??= [];
-  if(!save.activeId && save.ninjas[0]) save.activeId = save.ninjas[0].id;
-}
-
-/* ---------- Weapon ladder (best = +15/+15/+5) ---------- */
-const WEAPON_LADDER = [
-  // goes down from best; costs rise with total stats
-  {rar:"Legendary", str:15, agi:15, end:5},
-  {rar:"Epic",      str:12, agi:12, end:4},
-  {rar:"Rare",      str:9,  agi:9,  end:3},
-  {rar:"Uncommon",  str:6,  agi:5,  end:2},
-  {rar:"Common",    str:3,  agi:2,  end:1},
-  {rar:"Common",    str:2,  agi:1,  end:0},
-];
-
-const WEAPON_POOL = [
-  {name:"Katana", art:"katana"},
-  {name:"Tanto", art:"tanto"},
-  {name:"Naginata", art:"naginata"},
-  {name:"War Fan", art:"fan"},
-  {name:"Iron Staff", art:"staff"},
-  {name:"Moon Blade", art:"moon"},
-  {name:"Storm Edge", art:"storm"},
-  {name:"Chain Sickle", art:"chain"},
-];
-
-function weaponCostFromBonus(b){
-  // "more stats cost more gold"
-  const total = b.str + b.agi + b.end;
-  // weighted so END is valuable too
-  const power = (b.str*2.2) + (b.agi*2.2) + (b.end*3.0);
-  // base + nonlinear curve for high totals
-  return Math.round(60 + total*25 + Math.pow(power, 1.15) * 6.5);
-}
-
-function makeWeapon(){
-  const t = WEAPON_LADDER[rint(0, WEAPON_LADDER.length-1)];
-  const base = pick(WEAPON_POOL);
-  const bonus = {str:t.str, agi:t.agi, end:t.end};
-  const cost = weaponCostFromBonus(bonus);
-  return {
-    id:uid("w"),
-    type:"weapon",
-    rarity:t.rar,
-    name:base.name,
-    art:base.art,
-    bonus,
-    cost
-  };
-}
-
-/* ---------- Relics (smaller bonuses, karma cost) ---------- */
-const RELIC_POOL = [
-  {name:"Focus Charm",  tag:"atk"},
-  {name:"Shadow Bead",  tag:"dodge"},
-  {name:"Lotus Token",  tag:"def"},
-  {name:"Phoenix Feather", tag:"hp"},
-  {name:"Smoke Ring",   tag:"dodge"},
-  {name:"Karma Bead",   tag:"atk"},
-];
-
-function relicCostFromBonus(b){
-  const total = b.str + b.agi + b.end;
-  return Math.round(40 + total*18 + Math.pow(total,1.35)*10);
-}
-
-function makeRelic(){
-  const base = pick(RELIC_POOL);
-  // modest relics (usually smaller than weapons)
-  const bonus={str:rint(0,2), agi:rint(0,2), end:rint(0,2)};
-  const total = bonus.str+bonus.agi+bonus.end;
-  const rarity = total>=6 ? "Epic" : total>=4 ? "Rare" : total>=2 ? "Uncommon" : "Common";
-  const cost = relicCostFromBonus(bonus);
-  return {id:uid("r"), type:"relic", rarity, name:base.name, bonus, cost, tag:base.tag};
-}
-
-/* ---------- Ensure stock + refresh helpers ---------- */
-
-function ensureWeaponStock(){
-  ensureSaveIntegrity();
-  if(!Array.isArray(save.shop.weapons) || save.shop.weapons.length===0){
-    save.shop.weapons = Array.from({length:6}, ()=>makeWeapon());
-  }
-}
-function ensureRelicStock(){
-  ensureSaveIntegrity();
-  if(!Array.isArray(save.shop.relics) || save.shop.relics.length===0){
-    save.shop.relics = Array.from({length:6}, ()=>makeRelic());
-  }
-}
 
 /* ---------- Fix: activeNinja must always return something ---------- */
 function activeNinja(){
@@ -2439,6 +2342,169 @@ ensureSaveIntegrity();
 
 /* ======================================================
    END PART 4
+====================================================== */
+/* ======================================================
+   PART 5 — INTEGRITY + FINAL BINDING + SAFETY GUARDS
+   Fixes the missing ensureSaveIntegrity() + makes the file
+   resilient if the script is re-pasted / re-run.
+====================================================== */
+
+/* ---------- Data integrity ---------- */
+function ensureSaveIntegrity(){
+  // profiles structure
+  profiles = profiles || {active:"slot1", slots:{slot1:null,slot2:null,slot3:null}};
+  profiles.active ||= "slot1";
+  profiles.slots ||= {slot1:null,slot2:null,slot3:null};
+
+  // active slot must exist
+  if(!profiles.slots[profiles.active]) profiles.slots[profiles.active] = defaultSlot();
+  save = profiles.slots[profiles.active];
+
+  // save core structure
+  save.currency ||= {gold:200, karma:50};
+  save.currency.gold = Number(save.currency.gold||0);
+  save.currency.karma = Number(save.currency.karma||0);
+
+  save.daily ||= {lastClaim:0};
+  save.daily.lastClaim = Number(save.daily.lastClaim||0);
+
+  save.ninjas ||= [];
+  if(!Array.isArray(save.ninjas)) save.ninjas = [];
+
+  save.inventory ||= {weapons:[], relics:[]};
+  save.inventory.weapons ||= [];
+  save.inventory.relics ||= [];
+
+  save.shop ||= {weapons:[], relics:[]};
+  save.shop.weapons ||= [];
+  save.shop.relics ||= [];
+
+  save.meta ||= {wins:0, losses:0};
+  save.meta.wins   = Number(save.meta.wins||0);
+  save.meta.losses = Number(save.meta.losses||0);
+
+  // ensure at least 1 ninja
+  if(save.ninjas.length===0){
+    const starter = makeNinja("Starter Ninja");
+    starter.tp=10;
+    recalc(starter);
+    starter.hp=starter.maxHP;
+    save.ninjas=[starter];
+    save.activeId=starter.id;
+  }
+
+  // ensure activeId valid
+  if(!save.activeId || !save.ninjas.some(n=>n.id===save.activeId)){
+    save.activeId = save.ninjas[0].id;
+  }
+
+  // sanitize ninjas
+  for(const n of save.ninjas){
+    n.id ||= uid("n");
+    n.name ||= "Ninja";
+    n.tp = Number(n.tp||0);
+    n.base ||= {str:1,agi:1,end:1};
+    n.base.str = clamp(Number(n.base.str||1), 1, 999);
+    n.base.agi = clamp(Number(n.base.agi||1), 1, 999);
+    n.base.end = clamp(Number(n.base.end||1), 1, 999);
+    n.equip ||= {weaponId:null, relicId:null};
+    if(n.equip.weaponId === "") n.equip.weaponId = null;
+    if(n.equip.relicId  === "") n.equip.relicId  = null;
+    recalc(n);
+    n.hp = clamp(Number(n.hp ?? n.maxHP), 0, n.maxHP);
+  }
+
+  // sanitize items
+  const uniqById = (arr)=> {
+    const seen=new Set();
+    return arr.filter(x=>{
+      if(!x || !x.id) return false;
+      if(seen.has(x.id)) return false;
+      seen.add(x.id);
+      return true;
+    });
+  };
+  save.inventory.weapons = uniqById(save.inventory.weapons);
+  save.inventory.relics  = uniqById(save.inventory.relics);
+
+  save.shop.weapons = uniqById(save.shop.weapons);
+  save.shop.relics  = uniqById(save.shop.relics);
+
+  // remove equips that point to missing items
+  for(const n of save.ninjas){
+    if(n.equip.weaponId && !save.inventory.weapons.some(w=>w.id===n.equip.weaponId)){
+      n.equip.weaponId=null;
+    }
+    if(n.equip.relicId && !save.inventory.relics.some(r=>r.id===n.equip.relicId)){
+      n.equip.relicId=null;
+    }
+    recalc(n);
+    n.hp = clamp(n.hp, 0, n.maxHP);
+  }
+
+  // persist back into profiles
+  profiles.slots[profiles.active] = save;
+}
+
+/* ---------- One-time binding guard (prevents double onclick stacking) ---------- */
+function bindOnce(id, evt, handler){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const key = `__bound_${evt}`;
+  if(el[key]) return;
+  el.addEventListener(evt, handler);
+  el[key] = true;
+}
+
+/* ---------- Make sure battle loop exists even if battle opened later ---------- */
+(function ensureBattleLoopRunning(){
+  try{
+    initBattleRenderer();
+    if(!battleRAF) battleRAF = requestAnimationFrame(battleLoop);
+  }catch(e){
+    console.warn("Battle loop init skipped:", e);
+  }
+})();
+
+/* ---------- Final safe init ---------- */
+(function boot(){
+  try{
+    ensureSaveIntegrity();
+
+    // seed shops if empty so opening modals never crashes
+    ensureWeaponStock();
+    ensureRelicStock();
+
+    // refresh UI
+    refreshTop();
+
+    // OPTIONAL: if you want Dojo preview always correct when opening modal:
+    // (keeps your current behavior; just ensures no crash if called early)
+    if(document.getElementById("dojoCanvas")){
+      try{ drawDojoPreview(); }catch{}
+    }
+
+    // Bind a couple “often-missed” ones safely (others already use .onclick)
+    bindOnce("saveBtn","click",()=>{ try{ persist(); refreshTop(); alert("Saved!"); }catch(e){alert("Save error: "+(e?.message||e));} });
+    bindOnce("resetBtn","click",()=>{
+      try{
+        profiles.slots[profiles.active]=defaultSlot();
+        save=profiles.slots[profiles.active];
+        ensureSaveIntegrity();
+        persistProfiles();
+        refreshTop();
+        alert("Slot reset!");
+      }catch(e){ alert("Reset error: "+(e?.message||e)); }
+    });
+
+  }catch(e){
+    console.error(e);
+    alert("Boot error: " + (e?.message||e));
+  }
+})();
+
+/* ======================================================
+   END PART 5
 ====================================================== */
 </script>
 </body>
