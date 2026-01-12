@@ -1,387 +1,667 @@
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Ninja Clan RPG</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Ninja Clan RPG (Rebuild v1 — UI Skeleton)</title>
 
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#0f0f12;font-family:system-ui}
-.hidden{display:none!important}
-button{-webkit-tap-highlight-color:transparent}
-:root{--wood:#8b5a2b;--paper:#f4e6c8}
+  html,body{
+    margin:0;width:100%;height:100%;overflow:hidden;background:#0f0f12;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none
+  }
+  :root{
+    --pad-top: env(safe-area-inset-top);
+    --pad-right: env(safe-area-inset-right);
+    --pad-bottom: env(safe-area-inset-bottom);
+    --pad-left: env(safe-area-inset-left);
+    --wood1:#a56a3c; --wood2:#7a4b2a; --ink:#22140b; --accent:#ff7a18;
+  }
+  *{-webkit-tap-highlight-color:transparent}
+  .hidden{display:none!important}
 
-/* TOP BAR */
-#topbar{
- position:absolute;top:10px;left:10px;right:10px;
- background:var(--wood);color:#111;border-radius:14px;
- padding:8px;display:flex;justify-content:space-between;
- align-items:center;font-size:12px;z-index:50
-}
-.barL,.barR{display:flex;gap:6px;align-items:center}
-.chip{background:rgba(255,255,255,.7);border-radius:999px;padding:4px 8px;font-weight:900}
-.btn{border:0;border-radius:10px;padding:6px 10px;font-weight:900;background:#eee}
-.btn.primary{background:#ff8a2a}
-.btn.ghost{background:rgba(255,255,255,.4)}
+  /* ===== Top bar ===== */
+  #topbar{
+    position:absolute; z-index:50;
+    left:calc(10px + var(--pad-left));
+    right:calc(10px + var(--pad-right));
+    top:calc(10px + var(--pad-top));
+    display:flex;gap:8px;align-items:center;justify-content:space-between;
+    background:linear-gradient(var(--wood1),var(--wood2));
+    border:2px solid rgba(0,0,0,.18);
+    border-radius:14px;
+    padding:8px 10px;
+    box-shadow:0 10px 24px rgba(0,0,0,.25);
+    color:var(--ink);
+  }
+  .barL,.barR{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .chip{
+    display:flex;gap:6px;align-items:center;
+    background:rgba(255,255,255,.22);
+    border:1px solid rgba(0,0,0,.14);
+    border-radius:999px;
+    padding:5px 8px;
+    font-weight:950;
+    font-size:11px;
+    line-height:1;
+  }
+  .chip b{font-family:ui-monospace,Menlo,monospace}
+  .btn{
+    border:0;border-radius:12px;padding:9px 10px;font-weight:950;
+    background:#eee;color:#111; box-shadow:0 6px 14px rgba(0,0,0,.18);
+    font-size:12px;
+  }
+  .btn.primary{background:var(--accent)}
+  .btn.ghost{background:rgba(255,255,255,.25); border:1px solid rgba(0,0,0,.14);}
+  .btn.small{padding:7px 9px;font-size:11px;border-radius:11px}
 
-/* TOWN */
-#town{position:absolute;inset:0;padding-top:70px}
-#townBg{position:absolute;inset:0;background:url("town.jpg") center top/cover no-repeat}
-.hotspot{position:absolute;background:transparent;border:0}
-.label{position:absolute;left:50%;bottom:10%;transform:translateX(-50%);
- background:rgba(255,255,255,.85);padding:6px 10px;border-radius:999px;font-weight:900}
+  /* ===== Town ===== */
+  #town{ position:absolute; inset:0; padding-top:calc(56px + var(--pad-top)); }
+  #townLayer{ position:absolute; inset:0; transform: translateY(95px); }
+  #townBg{
+    position:absolute; inset:0;
+    background-image:url("town.jpg");
+    background-size:cover;
+    background-position:center top;
+    background-repeat:no-repeat;
+  }
+  .hotspot{
+    position:absolute;
+    background:transparent;
+    border:0;
+    border-radius:18px;
+    padding:0;
+    z-index:10;
+    touch-action:manipulation;
+  }
+  .label{
+    position:absolute;
+    left:50%;
+    bottom:10%;
+    transform:translateX(-50%);
+    padding:8px 12px;
+    border-radius:999px;
+    background:rgba(255,255,255,.78);
+    border:1px solid rgba(0,0,0,.15);
+    font-weight:1000;
+    font-size:14px;
+    color:#111;
+    box-shadow:0 8px 20px rgba(0,0,0,.18);
+    pointer-events:none;
+    white-space:nowrap;
+  }
 
-/* BUILDINGS */
-#hsHospital{left:2%;top:12%;width:35%;height:22%}
-#hsDojo{left:65%;top:10%;width:33%;height:26%}
-#hsDaimyo{left:33%;top:28%;width:34%;height:22%}
-#hsRelic{left:4%;top:42%;width:30%;height:20%}
-#hsWeapon{left:62%;top:34%;width:34%;height:22%}
-#hsRecruit{left:6%;top:60%;width:36%;height:22%}
-#hsFight{left:50%;top:52%;width:46%;height:22%}
+  /* Hotspots tuned for your town image style */
+  #hsHospital { left:  2%; top: 11%; width: 38%; height: 22%; }
+  #hsDojo     { left: 66%; top: 10%; width: 32%; height: 26%; }
+  #hsDaimyo   { left: 33%; top: 26%; width: 36%; height: 22%; }
+  #hsRelic    { left:  4%; top: 40%; width: 32%; height: 20%; }
+  #hsWeapon   { left: 62%; top: 33%; width: 34%; height: 22%; }
+  #hsRecruit  { left:  6%; top: 60%; width: 36%; height: 22%; }
+  #hsFight    { left: 49%; top: 51%; width: 47%; height: 22%; }
 
-/* MODALS */
-.modal{position:absolute;inset:0;background:rgba(0,0,0,.45);
- display:flex;align-items:center;justify-content:center;z-index:100}
-.card{background:var(--paper);border-radius:18px;padding:14px;width:94%;max-width:720px}
-.row{display:flex;gap:8px;align-items:center}
-.sp{justify-content:space-between}
-.title{font-weight:900;font-size:16px}
-.list{margin-top:10px;border-radius:12px;overflow:auto;background:rgba(255,255,255,.4)}
-.item{padding:10px;border-bottom:1px solid rgba(0,0,0,.1)}
-.item:last-child{border-bottom:0}
+  /* ===== Modals ===== */
+  .modal{
+    position:absolute; inset:0; z-index:80;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.35);
+    padding:14px;
+  }
+  .card{
+    width:min(720px,96%);
+    background:linear-gradient(#f7edd6,#f0e0bf);
+    border:2px solid rgba(0,0,0,.18);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 20px 50px rgba(0,0,0,.28);
+    color:#23140b;
+  }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sp{justify-content:space-between}
+  .title{margin:0;font-size:16px;font-weight:1000}
+  .muted{opacity:.78;font-size:12px;line-height:1.25}
+  .list{
+    margin-top:10px;
+    max-height:320px; overflow:auto;
+    border-radius:14px;
+    border:1px solid rgba(0,0,0,.14);
+    background:rgba(255,255,255,.22);
+  }
+  .item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;border-bottom:1px solid rgba(0,0,0,.10);
+    font-size:12px;
+  }
+  .item:last-child{border-bottom:0}
+  .pill{
+    display:inline-block;
+    padding:4px 8px;border-radius:999px;
+    background:rgba(255,255,255,.55);
+    border:1px solid rgba(0,0,0,.10);
+    font-size:11px;font-weight:950;
+  }
 
-/* BATTLE */
-#battle{position:absolute;inset:0;z-index:80}
-#battleBg{position:absolute;inset:0;background:url("battle.jpg") center/cover no-repeat}
-#battleCanvas{position:absolute;inset:0}
+  /* Tabs */
+  .tabs{display:flex;gap:8px;margin-top:8px}
+  .tab{
+    padding:8px 10px;border-radius:999px;font-weight:1000;font-size:12px;
+    border:1px solid rgba(0,0,0,.14);
+    background:rgba(255,255,255,.35);
+  }
+  .tab.active{background:rgba(255,255,255,.65)}
+  .tabPane{margin-top:10px}
 
-/* BELTS */
-.belt{display:inline-block;width:16px;height:6px;border-radius:3px}
+  /* Dojo preview */
+  #dojoPreviewWrap{
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    background:rgba(255,255,255,.22);
+    border:1px solid rgba(0,0,0,.12);
+    border-radius:14px;
+    padding:10px 12px;
+    margin-top:10px;
+  }
+  #dojoCanvas{
+    width:120px;height:120px;
+    border-radius:14px;
+    border:1px solid rgba(0,0,0,.12);
+    background:rgba(0,0,0,.08);
+  }
+
+  /* ===== Battle (screen only; engine comes in Step 3) ===== */
+  #battle{ position:absolute; inset:0; z-index:60; }
+  #battleBg{
+    position:absolute; inset:0;
+    background-image:url("battle.jpg");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    transform:scale(1.02);
+  }
+  #battleCanvas{position:absolute; inset:0; width:100%; height:100%}
+  #battleTop{
+    position:absolute; z-index:70;
+    left:calc(10px + var(--pad-left));
+    right:calc(10px + var(--pad-right));
+    top:calc(10px + var(--pad-top));
+    display:flex;gap:10px;align-items:center;justify-content:space-between;
+  }
+  .hpBox{
+    flex:1 1 0;
+    background:linear-gradient(var(--wood1),var(--wood2));
+    border:2px solid rgba(0,0,0,.18);
+    border-radius:14px;
+    padding:10px 12px;
+    box-shadow:0 10px 24px rgba(0,0,0,.22);
+    color:var(--ink);
+    min-width:0;
+  }
+  .hpName{font-weight:1000;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hpBar{height:12px;border-radius:999px;background:rgba(0,0,0,.18);overflow:hidden;margin-top:6px;border:1px solid rgba(0,0,0,.12);}
+  .hpFill{height:100%; width:70%; background:linear-gradient(#ffb845,#ff7a18);}
+  .vs{font-weight:1000;font-size:22px;color:#fff;text-shadow:0 4px 10px rgba(0,0,0,.35);padding:0 10px}
+  #battleBackBtn{
+    position:absolute; z-index:70;
+    top:calc(78px + var(--pad-top));
+    left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.8);
+    border:2px solid rgba(0,0,0,.18);
+    border-radius:12px; padding:10px 14px; font-weight:1000;
+  }
 </style>
 </head>
 
 <body>
-
-<div id="topbar">
-  <div class="barL">
-    <div class="chip" id="uiName">—</div>
-    <div class="chip">Lv <b id="uiLevel">1</b></div>
-    <div class="chip">HP <b id="uiHP">—</b></div>
-    <div class="chip">TP <b id="uiTP">0</b></div>
-    <div class="chip">Belt <b id="uiBelt">White</b></div>
+  <div id="topbar">
+    <div class="barL">
+      <div class="chip">Rebuild <b>UI-SKELETON</b></div>
+      <div class="chip">Active <b id="uiName">Starter Ninja</b></div>
+      <div class="chip">HP <b id="uiHP">60/60</b></div>
+      <div class="chip">TP <b id="uiTP">10</b></div>
+      <div class="chip">Belt <b id="uiBelt">White</b></div>
+      <div class="chip">🪙 <b id="uiGold">200</b></div>
+      <div class="chip">☯ <b id="uiKarma">50</b></div>
+    </div>
+    <div class="barR">
+      <button class="btn ghost small" id="dailyBtn">Meditate</button>
+      <button class="btn ghost small" id="profilesBtn">Profiles</button>
+      <button class="btn ghost small" id="saveBtn">Save</button>
+      <button class="btn ghost small" id="resetBtn">Reset</button>
+    </div>
   </div>
-  <div class="barR">
-    <button class="btn ghost" id="dailyBtn">Meditate</button>
-    <button class="btn ghost" id="profileBtn">Profiles</button>
+
+  <!-- Town -->
+  <div id="town">
+    <div id="townLayer">
+      <div id="townBg"></div>
+
+      <button class="hotspot" id="hsHospital"><div class="label">Hospital</div></button>
+      <button class="hotspot" id="hsDojo"><div class="label">Dojo</div></button>
+      <button class="hotspot" id="hsDaimyo"><div class="label">Daimyo</div></button>
+      <button class="hotspot" id="hsRelic"><div class="label">Relic Shop</div></button>
+      <button class="hotspot" id="hsWeapon"><div class="label">Weapon Shop</div></button>
+      <button class="hotspot" id="hsRecruit"><div class="label">Recruit</div></button>
+      <button class="hotspot" id="hsFight"><div class="label">Battle</div></button>
+    </div>
   </div>
-</div>
 
-<div id="town">
-  <div id="townBg"></div>
-  <button class="hotspot" id="hsHospital"><div class="label">Hospital</div></button>
-  <button class="hotspot" id="hsDojo"><div class="label">Dojo</div></button>
-  <button class="hotspot" id="hsDaimyo"><div class="label">Daimyo</div></button>
-  <button class="hotspot" id="hsRelic"><div class="label">Relics</div></button>
-  <button class="hotspot" id="hsWeapon"><div class="label">Weapons</div></button>
-  <button class="hotspot" id="hsRecruit"><div class="label">Recruit</div></button>
-  <button class="hotspot" id="hsFight"><div class="label">Battle</div></button>
-</div>
+  <!-- Battle (placeholder view for now; Step 3 will implement engine) -->
+  <div id="battle" class="hidden">
+    <div id="battleBg"></div>
+    <canvas id="battleCanvas"></canvas>
 
-<div id="battle" class="hidden">
-  <div id="battleBg"></div>
-  <canvas id="battleCanvas"></canvas>
-</div>
+    <div id="battleTop">
+      <div class="hpBox">
+        <div class="hpName" id="pName">You</div>
+        <div class="hpBar"><div class="hpFill" id="pHPFill"></div></div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="hpBox">
+        <div class="hpName" id="eName">Enemy</div>
+        <div class="hpBar"><div class="hpFill" id="eHPFill"></div></div>
+      </div>
+    </div>
 
-<script>
+    <button id="battleBackBtn" class="btn">BACK</button>
+  </div>
+
+  <!-- Dojo Modal -->
+  <div class="modal hidden" id="dojoModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Dojo</h3>
+        <button class="btn ghost small" id="closeDojo">Close</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" id="tabTrain">Training</button>
+        <button class="tab" id="tabNinja">Ninja</button>
+      </div>
+
+      <!-- Training tab -->
+      <div class="tabPane" id="paneTrain">
+        <div class="muted">Spend TP to train STR / AGI / END. (Soft caps + belt/level come in Step 2.)</div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="chip">STR <b id="stSTR">1</b></div>
+          <div class="chip">AGI <b id="stAGI">1</b></div>
+          <div class="chip">END <b id="stEND">1</b></div>
+          <div class="chip">TP <b id="tpHere">10</b></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="trainSTR">+ STR</button>
+          <button class="btn primary" id="trainAGI">+ AGI</button>
+          <button class="btn primary" id="trainEND">+ END</button>
+        </div>
+      </div>
+
+      <!-- Ninja tab -->
+      <div class="tabPane hidden" id="paneNinja">
+        <div class="muted">Current ninja, stats, and equipment (full inventory/equip comes in Step 2).</div>
+
+        <div id="dojoPreviewWrap">
+          <canvas id="dojoCanvas" width="120" height="120"></canvas>
+          <div style="min-width:200px;flex:1">
+            <div style="font-weight:1000;font-size:14px" id="djName">Starter Ninja</div>
+            <div class="muted" id="djLine">HP 60/60 • TP 10</div>
+            <div class="muted" id="djBelt">Belt: White</div>
+            <div class="muted" id="djEquip">Equipped: None</div>
+          </div>
+        </div>
+
+        <div class="list" style="margin-top:10px">
+          <div class="item"><div><b>Weapon</b><div class="muted">Equip from Weapon Shop</div></div><span class="pill" id="djWeapon">None</span></div>
+          <div class="item"><div><b>Relic</b><div class="muted">Equip from Relic Shop</div></div><span class="pill" id="djRelic">None</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recruit Modal -->
+  <div class="modal hidden" id="recruitModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Recruit</h3>
+        <button class="btn ghost small" id="closeRecruit">Close</button>
+      </div>
+      <div class="muted">Roster list + set active will be wired in Step 2. This is UI skeleton.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="recruitBtn">Recruit</button>
+        <button class="btn ghost" id="setActiveBtn">Set Active</button>
+      </div>
+      <div class="list" id="rosterList"></div>
+    </div>
+  </div>
+
+  <!-- Weapon Shop Modal -->
+  <div class="modal hidden" id="weaponModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Weapon Shop</h3>
+        <button class="btn ghost small" id="closeWeapon">Close</button>
+      </div>
+      <div class="muted">Full shop list + buy/equip logic comes in Step 2. UI skeleton.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="buyWeaponBtn">Buy</button>
+        <button class="btn primary" id="equipWeaponBtn">Equip</button>
+        <button class="btn ghost" id="refreshWeaponBtn">Refresh</button>
+      </div>
+      <div class="list" id="weaponList"></div>
+    </div>
+  </div>
+
+  <!-- Relic Shop Modal -->
+  <div class="modal hidden" id="relicModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Relic Shop</h3>
+        <button class="btn ghost small" id="closeRelic">Close</button>
+      </div>
+      <div class="muted">Full shop list + buy/equip logic comes in Step 2. UI skeleton.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="buyRelicBtn">Buy</button>
+        <button class="btn primary" id="equipRelicBtn">Equip</button>
+        <button class="btn ghost" id="refreshRelicBtn">Refresh</button>
+      </div>
+      <div class="list" id="relicList"></div>
+    </div>
+  </div>
+
+  <!-- Daimyo Modal -->
+  <div class="modal hidden" id="daiModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Daimyo</h3>
+        <button class="btn ghost small" id="closeDai">Close</button>
+      </div>
+      <div class="muted">Progression overview (belt thresholds + wins/losses UI comes in Step 2).</div>
+      <div class="list" style="margin-top:10px">
+        <div class="item"><div><b>Belts</b><div class="muted">White → Black</div></div><span class="pill">TP-based</span></div>
+        <div class="item"><div><b>Clan</b><div class="muted">Your ninja roster</div></div><span class="pill" id="dClan">1 ninja</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Battle Select Modal -->
+  <div class="modal hidden" id="battleSelectModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Choose Battle</h3>
+        <button class="btn ghost small" id="closeBattleSelect">Close</button>
+      </div>
+      <div class="muted">This is the selection UI. Step 3 adds real battles + animations.</div>
+      <div class="list" id="battleList"></div>
+    </div>
+  </div>
+
+  <!-- Profiles Modal -->
+  <div class="modal hidden" id="profilesModal">
+    <div class="card">
+      <div class="row sp">
+        <h3 class="title">Profiles</h3>
+        <button class="btn ghost small" id="closeProfiles">Close</button>
+      </div>
+      <div class="muted">Save slots UI. Step 2 wires real switching + metadata.</div>
+      <div class="list" id="profilesList"></div>
+    </div>
+  </div>
+
 <script>
 /* ======================================================
-   NINJA CLAN RPG — FULL ADVANCED GAME SCRIPT
-   Restored battles + shops + dojo
+   STEP 1 — UI SKELETON ONLY
+   Goal: Everything clickable, modals open/close, no errors.
 ====================================================== */
 
-/* ---------- HELPERS ---------- */
-const $ = id => document.getElementById(id);
-const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-const rand = (a,b)=>a+Math.random()*(b-a);
-const rint = (a,b)=>Math.floor(rand(a,b+1));
-const pick = a=>a[Math.floor(Math.random()*a.length)];
-const uid = p=>"id_"+p+"_"+Math.random().toString(16).slice(2);
+const SAVE_KEY = "ninja_rebuild_ui_skeleton_v1";
 
-/* ---------- BELTS ---------- */
-const BELT_STEPS = [
-  ["White",0,"#f5f5f5"],
-  ["Yellow",5,"#ffd54a"],
-  ["Orange",12,"#ff8a2a"],
-  ["Green",20,"#37c76b"],
-  ["Blue",40,"#3a82ff"],
-  ["Brown",60,"#7a4b2a"],
-  ["Black",80,"#111"]
-];
-function beltFromTP(tp){
-  let b="White";
-  for(const s of BELT_STEPS) if(tp>=s[1]) b=s[0];
-  return b;
-}
-function beltColor(b){
-  return BELT_STEPS.find(x=>x[0]===b)?.[2]||"#fff";
-}
+function $(id){ return document.getElementById(id); }
 
-/* ---------- CORE DATA ---------- */
-function makeNinja(name="Ninja"){
-  return{
-    id:uid("n"),name,
-    base:{str:1,agi:1,end:1},
-    tp:10,
-    hp:60,maxHP:60,
-    equip:{weapon:null,relic:null},
-    derived:{}
-  };
-}
-function defaultSave(){
-  const n=makeNinja("Starter Ninja");
-  return{
-    ninjas:[n],
-    activeId:n.id,
-    gold:200,
-    karma:50,
-    inventory:{weapons:[],relics:[]},
-    shop:{weapons:[],relics:[]},
-    daily:{last:0},
-    ladder:{wins:0,losses:0},
-    bossDefeated:false
+function defaultState(){
+  return {
+    currency:{gold:200, karma:50},
+    ninjas:[{
+      id:"n1",
+      name:"Starter Ninja",
+      hp:60,maxHP:60,tp:10,
+      base:{str:1,agi:1,end:1},
+      equip:{weapon:null,relic:null}
+    }],
+    activeId:"n1",
+    shop:{weapons:[], relics:[]},
+    rosterSelectedId:"n1"
   };
 }
 
-/* ---------- PROFILES ---------- */
-const PROFILE_KEY="ninja_clan_profiles_v2";
-let profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||
-  '{"active":"slot1","slots":{"slot1":null,"slot2":null,"slot3":null}}');
-if(!profiles.slots.slot1){
-  profiles.slots.slot1=defaultSave();
-  profiles.active="slot1";
-}
-let save=profiles.slots[profiles.active];
-function persist(){
-  profiles.slots[profiles.active]=save;
-  localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
-}
-
-/* ---------- PROGRESSION ---------- */
-function tpSpent(n){
-  return (n.base.str-1)+(n.base.agi-1)+(n.base.end-1);
-}
-function trainingCost(v){
-  if(v>=21) return 5;
-  if(v>=16) return 4;
-  if(v>=11) return 3;
-  if(v>=6) return 2;
-  return 1;
-}
-function recalc(n){
-  const spent=tpSpent(n);
-  n.level=1+spent;
-  const STR=n.base.str+(n.equip.weapon?.bonus.str||0)+(n.equip.relic?.bonus.str||0);
-  const AGI=n.base.agi+(n.equip.weapon?.bonus.agi||0)+(n.equip.relic?.bonus.agi||0);
-  const END=n.base.end+(n.equip.weapon?.bonus.end||0)+(n.equip.relic?.bonus.end||0);
-  n.maxHP=60+END*12+n.level*4;
-  n.hp=clamp(n.hp,1,n.maxHP);
-  n.derived={
-    atk:Math.floor(6+STR*3+n.level*1.2),
-    def:Math.floor(END+ n.level*0.6),
-    spd:1+AGI*0.12,
-    dodge:clamp(0.03+AGI*0.015,0,0.3)
-  };
-}
-function active(){
-  const n=save.ninjas.find(n=>n.id===save.activeId)||save.ninjas[0];
-  recalc(n); return n;
-}
-
-/* ---------- DAILY ---------- */
-$("dailyBtn").onclick=()=>{
-  const now=Date.now();
-  if(now-save.daily.last<30*60*1000)
-    return alert("Meditation not ready yet");
-  const b=beltFromTP(tpSpent(active()));
-  const tp=b==="White"?1:b==="Yellow"?2:b==="Orange"?3:b==="Green"?4:5;
-  active().tp+=tp;
-  save.daily.last=now;
-  persist();refreshTop();
-  alert(`Meditation complete +${tp} TP`);
-};
-
-/* ---------- WEAPONS ---------- */
-const WEAPON_TIERS=[
-  {tier:"Common",str:2,agi:1,end:0,cost:60},
-  {tier:"Uncommon",str:4,agi:3,end:1,cost:140},
-  {tier:"Rare",str:7,agi:6,end:2,cost:320},
-  {tier:"Epic",str:10,agi:10,end:3,cost:650},
-  {tier:"Legendary",str:15,agi:15,end:5,cost:1200}
-];
-const WEAPON_NAMES=["Katana","Tanto","Naginata","War Fan","Iron Staff","Moon Blade","Storm Edge"];
-function makeWeapon(){
-  const t=WEAPON_TIERS[rint(0,WEAPON_TIERS.length-1)];
-  return{
-    id:uid("w"),
-    name:pick(WEAPON_NAMES),
-    tier:t.tier,
-    bonus:{str:t.str,agi:t.agi,end:t.end},
-    cost:t.cost
-  };
-}
-function ensureWeaponShop(){
-  if(!save.shop.weapons.length)
-    save.shop.weapons=Array.from({length:6},makeWeapon);
-}
-
-/* ---------- RELICS ---------- */
-function makeRelic(){
-  return{
-    id:uid("r"),
-    name:pick(["Focus Charm","Shadow Bead","Lotus Token","Phoenix Feather"]),
-    bonus:{str:rint(0,2),agi:rint(1,3),end:rint(1,3)},
-    cost:80+rint(40,160)
-  };
-}
-function ensureRelicShop(){
-  if(!save.shop.relics.length)
-    save.shop.relics=Array.from({length:6},makeRelic);
-}
-
-/* ---------- DOJO ---------- */
-$("hsDojo").onclick=()=>{
-  const n=active();
-  const cost=trainingCost(n.base.str);
-  if(n.tp<cost) return alert("Not enough TP");
-  if(confirm(`Train STR for ${cost} TP?`)){
-    n.tp-=cost; n.base.str++;
-    recalc(n); persist(); refreshTop();
+let state = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return defaultState();
+    const s = JSON.parse(raw);
+    return s?.ninjas?.length ? s : defaultState();
+  }catch{
+    return defaultState();
   }
-};
-
-/* ---------- RECRUIT ---------- */
-$("hsRecruit").onclick=()=>{
-  const cost=200+save.ninjas.length*100;
-  if(save.gold<cost) return alert("Not enough gold");
-  save.gold-=cost;
-  save.ninjas.push(makeNinja("Clan Ninja"));
-  persist();refreshTop();
-};
-
-/* ---------- SHOPS ---------- */
-$("hsWeapon").onclick=()=>{
-  ensureWeaponShop();
-  const w=save.shop.weapons[0];
-  if(confirm(`Buy ${w.name} (${w.tier}) for ${w.cost} gold?`)){
-    if(save.gold<w.cost) return;
-    save.gold-=w.cost;
-    save.inventory.weapons.push(w);
-    active().equip.weapon=w;
-    save.shop.weapons.shift();
-    persist();refreshTop();
-  }
-};
-$("hsRelic").onclick=()=>{
-  ensureRelicShop();
-  const r=save.shop.relics[0];
-  if(confirm(`Buy ${r.name} for ${r.cost} karma?`)){
-    if(save.karma<r.cost) return;
-    save.karma-=r.cost;
-    save.inventory.relics.push(r);
-    active().equip.relic=r;
-    save.shop.relics.shift();
-    persist();refreshTop();
-  }
-};
-
-/* ---------- BATTLE ENGINE ---------- */
-const battle=$("battle"), town=$("town");
-const canvas=$("battleCanvas"), ctx=canvas.getContext("2d");
-function resize(){
-  canvas.width=innerWidth*devicePixelRatio;
-  canvas.height=innerHeight*devicePixelRatio;
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 }
-addEventListener("resize",resize);resize();
+function persist(){ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
 
-function generateEnemyClan(boss=false){
-  if(boss){
-    const b=makeNinja("Grandmaster Kuro");
-    b.base={str:27,agi:26,end:26}; b.tp=0; recalc(b);
-    return {name:"Black Belt Grandmaster",ninjas:[b],boss:true};
-  }
-  const size=rint(1,save.ninjas.length+2);
-  const clan=[];
-  for(let i=0;i<size;i++){
-    const n=makeNinja("Enemy Ninja");
-    n.base={str:rint(3,8),agi:rint(3,8),end:rint(3,8)};
-    recalc(n); clan.push(n);
-  }
-  return {name:"Enemy Clan",ninjas:clan,boss:false};
+function activeNinja(){
+  return state.ninjas.find(n=>n.id===state.activeId) || state.ninjas[0];
 }
 
-function startBattle(clan){
-  battle.classList.remove("hidden");
-  town.classList.add("hidden");
-  let pQ=save.ninjas.map(n=>({...n}));
-  let eQ=clan.ninjas.map(n=>({...n}));
+/* ---------- Modal helpers ---------- */
+function openModal(id){ $(id).classList.remove("hidden"); }
+function closeModal(id){ $(id).classList.add("hidden"); }
 
-  function round(){
-    if(!pQ.length||!eQ.length){
-      endBattle(pQ.length>0,clan); return;
-    }
-    fight(pQ[0],eQ[0]);
-  }
+/* ---------- Tabs ---------- */
+function setDojoTab(which){
+  $("tabTrain").classList.toggle("active", which==="train");
+  $("tabNinja").classList.toggle("active", which==="ninja");
+  $("paneTrain").classList.toggle("hidden", which!=="train");
+  $("paneNinja").classList.toggle("hidden", which!=="ninja");
+  refreshDojo();
+}
+$("tabTrain").onclick=()=>setDojoTab("train");
+$("tabNinja").onclick=()=>setDojoTab("ninja");
 
-  function fight(p,e){
-    recalc(p); recalc(e);
-    p.hp=p.maxHP; e.hp=e.maxHP;
-    const dmg=()=>Math.max(1,p.derived.atk-e.derived.def);
-    const edmg=()=>Math.max(1,e.derived.atk-p.derived.def);
-    while(p.hp>0&&e.hp>0){
-      p.hp-=edmg(); e.hp-=dmg();
-    }
-    if(p.hp<=0) pQ.shift();
-    if(e.hp<=0) eQ.shift();
-    setTimeout(round,300);
-  }
-  round();
+/* ---------- Simple preview draw (placeholder) ---------- */
+function roundRect(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y, x+w,y+h, rr);
+  ctx.arcTo(x+w,y+h, x,y+h, rr);
+  ctx.arcTo(x,y+h, x,y, rr);
+  ctx.arcTo(x,y, x+w,y, rr);
+  ctx.closePath();
+  ctx.fill();
+}
+function drawPreview(){
+  const c=$("dojoCanvas");
+  const ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  const n=activeNinja();
+
+  // body
+  ctx.fillStyle="#111";
+  roundRect(ctx,42,44,36,42,12);
+
+  // head
+  ctx.beginPath(); ctx.arc(60,30,16,0,Math.PI*2); ctx.fill();
+
+  // belt
+  ctx.fillStyle="#f5f5f5";
+  roundRect(ctx,42,64,36,8,4);
+
+  // arms placeholder
+  ctx.strokeStyle="#111"; ctx.lineWidth=6; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(44,56); ctx.lineTo(28,70); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(76,56); ctx.lineTo(92,70); ctx.stroke();
+
+  // small weapon hint
+  ctx.strokeStyle="rgba(255,255,255,.6)"; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(92,70); ctx.lineTo(110,52); ctx.stroke();
+
+  // name
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  ctx.font="900 10px system-ui";
+  ctx.fillText(n.name.slice(0,10), 10, 115);
 }
 
-function endBattle(win,clan){
-  battle.classList.add("hidden");
-  town.classList.remove("hidden");
-  if(win){
-    save.gold+=clan.boss?1500:200;
-    save.karma+=clan.boss?500:50;
-    active().tp+=clan.boss?10:2;
-    if(clan.boss) save.bossDefeated=true;
-    alert("Victory!");
-  }else{
-    save.ladder.losses++;
-    alert("Defeat...");
-  }
-  persist();refreshTop();
-}
-
-$("hsFight").onclick=()=>{
-  const boss=!save.bossDefeated&&confirm("Fight Black Belt Grandmaster?");
-  startBattle(generateEnemyClan(boss));
-};
-
-/* ---------- UI ---------- */
+/* ---------- UI refresh ---------- */
 function refreshTop(){
-  const n=active();
-  $("uiName").textContent=n.name;
-  $("uiLevel").textContent=n.level;
-  $("uiHP").textContent=n.hp+"/"+n.maxHP;
-  $("uiTP").textContent=n.tp;
-  $("uiBelt").textContent=beltFromTP(tpSpent(n));
+  const n=activeNinja();
+  $("uiName").textContent = n.name;
+  $("uiHP").textContent = `${n.hp}/${n.maxHP}`;
+  $("uiTP").textContent = n.tp;
+  $("uiBelt").textContent = "White";
+  $("uiGold").textContent = state.currency.gold;
+  $("uiKarma").textContent = state.currency.karma;
 }
-refreshTop();
+function refreshDojo(){
+  const n=activeNinja();
+  $("stSTR").textContent=n.base.str;
+  $("stAGI").textContent=n.base.agi;
+  $("stEND").textContent=n.base.end;
+  $("tpHere").textContent=n.tp;
+
+  $("djName").textContent=n.name;
+  $("djLine").textContent=`HP ${n.hp}/${n.maxHP} • TP ${n.tp}`;
+  $("djBelt").textContent=`Belt: White`;
+  $("djEquip").textContent=`Equipped: None`;
+  $("djWeapon").textContent=n.equip.weapon ? n.equip.weapon.name : "None";
+  $("djRelic").textContent=n.equip.relic ? n.equip.relic.name : "None";
+
+  drawPreview();
+}
+function refreshRoster(){
+  const list=$("rosterList");
+  list.innerHTML="";
+  state.ninjas.forEach(n=>{
+    const row=document.createElement("div");
+    row.className="item";
+    row.style.background = (n.id===state.rosterSelectedId) ? "rgba(255,255,255,.35)" : "";
+    row.innerHTML=`
+      <div style="min-width:0">
+        <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${n.name} ${n.id===state.activeId ? `<span class="pill">ACTIVE</span>`:""}
+        </div>
+        <div class="muted">STR ${n.base.str} • AGI ${n.base.agi} • END ${n.base.end} • TP ${n.tp}</div>
+      </div>
+      <button class="btn ghost small">Select</button>
+    `;
+    row.querySelector("button").onclick=()=>{ state.rosterSelectedId=n.id; persist(); refreshRoster(); };
+    list.appendChild(row);
+  });
+}
+function refreshProfiles(){
+  const list=$("profilesList");
+  list.innerHTML="";
+  const row=document.createElement("div");
+  row.className="item";
+  row.innerHTML=`<div><b>Slot 1</b><div class="muted">UI skeleton only</div></div><span class="pill">ACTIVE</span>`;
+  list.appendChild(row);
+}
+function refreshBattleList(){
+  const list=$("battleList");
+  list.innerHTML="";
+  const makeRow=(name,desc)=>{
+    const row=document.createElement("div");
+    row.className="item";
+    row.innerHTML=`<div><b>${name}</b><div class="muted">${desc}</div></div><button class="btn primary">Select</button>`;
+    row.querySelector("button").onclick=()=>{
+      closeModal("battleSelectModal");
+      showBattle(true); // placeholder view only
+    };
+    list.appendChild(row);
+  };
+  makeRow("Enemy Clan (Easy)", "1–2 ninjas • placeholder");
+  makeRow("Enemy Clan (Hard)", "3–4 ninjas • placeholder");
+  makeRow("Black Belt Boss", "Grandmaster • placeholder");
+}
+
+/* ---------- Town actions ---------- */
+$("hsHospital").onclick=()=>{
+  const n=activeNinja();
+  n.hp=n.maxHP;
+  persist(); refreshTop(); refreshDojo();
+  openModal("daiModal"); // quick feedback for now
+  $("dClan").textContent = `${state.ninjas.length} ninja${state.ninjas.length===1?"":"s"}`;
+};
+$("hsDojo").onclick=()=>{
+  setDojoTab("train");
+  refreshDojo();
+  openModal("dojoModal");
+};
+$("hsDaimyo").onclick=()=>{
+  $("dClan").textContent = `${state.ninjas.length} ninja${state.ninjas.length===1?"":"s"}`;
+  openModal("daiModal");
+};
+$("hsRelic").onclick=()=>{ openModal("relicModal"); };
+$("hsWeapon").onclick=()=>{ openModal("weaponModal"); };
+$("hsRecruit").onclick=()=>{
+  refreshRoster();
+  openModal("recruitModal");
+};
+$("hsFight").onclick=()=>{
+  refreshBattleList();
+  openModal("battleSelectModal");
+};
+
+/* ---------- Close buttons ---------- */
+$("closeDojo").onclick=()=>closeModal("dojoModal");
+$("closeRecruit").onclick=()=>closeModal("recruitModal");
+$("closeWeapon").onclick=()=>closeModal("weaponModal");
+$("closeRelic").onclick=()=>closeModal("relicModal");
+$("closeDai").onclick=()=>closeModal("daiModal");
+$("closeBattleSelect").onclick=()=>closeModal("battleSelectModal");
+$("profilesBtn").onclick=()=>{ refreshProfiles(); openModal("profilesModal"); };
+$("closeProfiles").onclick=()=>closeModal("profilesModal");
+
+/* ---------- Battle screen placeholder controls ---------- */
+function showBattle(v){
+  $("battle").classList.toggle("hidden", !v);
+  $("town").classList.toggle("hidden", v);
+}
+$("battleBackBtn").onclick=()=>showBattle(false);
+
+/* ---------- Buttons that will be wired in Step 2 ---------- */
+$("trainSTR").onclick=()=>{ const n=activeNinja(); if(n.tp<=0) return; n.tp--; n.base.str++; persist(); refreshTop(); refreshDojo(); };
+$("trainAGI").onclick=()=>{ const n=activeNinja(); if(n.tp<=0) return; n.tp--; n.base.agi++; persist(); refreshTop(); refreshDojo(); };
+$("trainEND").onclick=()=>{ const n=activeNinja(); if(n.tp<=0) return; n.tp--; n.base.end++; persist(); refreshTop(); refreshDojo(); };
+
+$("recruitBtn").onclick=()=>{
+  // placeholder recruit
+  const id="n"+(state.ninjas.length+1);
+  state.ninjas.push({id,name:`Clan Ninja ${state.ninjas.length}`,hp:60,maxHP:60,tp:0,base:{str:1,agi:1,end:1},equip:{weapon:null,relic:null}});
+  state.rosterSelectedId=id;
+  persist(); refreshTop(); refreshRoster();
+};
+$("setActiveBtn").onclick=()=>{
+  if(!state.rosterSelectedId) return;
+  state.activeId=state.rosterSelectedId;
+  persist(); refreshTop(); refreshDojo(); refreshRoster();
+};
+
+/* Shop placeholders (Step 2 will be real lists) */
+$("buyWeaponBtn").onclick=()=>alert("Step 2 will restore full Weapon Shop list + buy/equip.");
+$("equipWeaponBtn").onclick=()=>alert("Step 2 will restore equip from owned weapons.");
+$("refreshWeaponBtn").onclick=()=>alert("Step 2 will restore weapon refresh.");
+$("buyRelicBtn").onclick=()=>alert("Step 2 will restore full Relic Shop list + buy/equip.");
+$("equipRelicBtn").onclick=()=>alert("Step 2 will restore equip from owned relics.");
+$("refreshRelicBtn").onclick=()=>alert("Step 2 will restore relic refresh.");
+
+/* Save / reset */
+$("saveBtn").onclick=()=>{ persist(); refreshTop(); };
+$("resetBtn").onclick=()=>{ localStorage.removeItem(SAVE_KEY); state=defaultState(); persist(); refreshTop(); refreshDojo(); };
+
+/* Meditation placeholder */
+$("dailyBtn").onclick=()=>alert("Step 2 wires 30-min TP meditation reward.");
+
 persist();
-</script>
+refreshTop();
+refreshDojo();
 </script>
 </body>
 </html>
