@@ -219,18 +219,24 @@
     box-shadow:0 20px 60px rgba(0,0,0,.35);
   }
   #battleLog{
-    position:absolute; left:calc(10px + var(--pad-left));
-    right:calc(10px + var(--pad-right));
-    bottom:calc(10px + var(--pad-bottom));
-    z-index:75;
-    background:rgba(255,255,255,.88);
-    border:2px solid rgba(0,0,0,.16);
-    border-radius:14px;
-    padding:10px 10px;
-    font-size:12px;
-    color:#1d120b;
-    box-shadow:0 14px 34px rgba(0,0,0,.18);
-  }
+  position:absolute;
+  left:calc(10px + var(--pad-left));
+  right:calc(10px + var(--pad-right));
+  bottom:calc(10px + var(--pad-bottom));
+  z-index:75;
+
+  /* ↓↓↓ CHANGES ↓↓↓ */
+  max-height: 90px;          /* about half current size */
+  overflow-y: auto;           /* scroll if log grows */
+  background: rgba(255,255,255,.45); /* more transparent */
+
+  border:2px solid rgba(0,0,0,.16);
+  border-radius:14px;
+  padding:8px 10px;
+  font-size:12px;
+  color:#1d120b;
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+}
   #battleLog .muted{font-size:11px}
   #battleText{white-space: pre-line;}
   #battleLogButtons{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
