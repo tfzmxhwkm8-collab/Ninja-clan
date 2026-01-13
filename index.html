@@ -1590,7 +1590,7 @@ function makeBossEnemy(){
   const baseEnd=1+each;
 
   const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
-  boss.base.str += 40; boss.base.agi += 40; boss.base.end += 100;
+  boss.base.str += 100; boss.base.agi += 100; boss.base.end += 300;
   recalc(boss); boss.hp=boss.maxHP;
   boss.isBoss=true;
   return [boss];
