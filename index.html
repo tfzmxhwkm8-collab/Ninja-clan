@@ -830,9 +830,39 @@ function drawWeaponSilhouette(ctx, kind){
   }else if(kind==="fan"){
     ctx.beginPath(); ctx.arc(0,0,10,Math.PI*1.2,Math.PI*1.8); ctx.stroke();
   }else if(kind==="dragonDagger"){
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(12,-12); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(12,-12); ctx.lineTo(18,-8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(6,-6); ctx.lineTo(10,-10); ctx.stroke();
+  ctx.save();
+
+  // white glow
+  ctx.shadowColor = "rgba(255,255,255,.9)";
+  ctx.shadowBlur  = 10;
+
+  // red blade
+  ctx.strokeStyle = "rgba(190,20,20,.95)";
+  ctx.lineWidth = 3;
+
+  // blade held DOWNWARD
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, 22);
+  ctx.stroke();
+
+  // tip flare
+  ctx.beginPath();
+  ctx.moveTo(-3, 20);
+  ctx.lineTo(0, 26);
+  ctx.lineTo(3, 20);
+  ctx.stroke();
+
+  // guard
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255,255,255,.85)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-5, 2);
+  ctx.lineTo(5, 2);
+  ctx.stroke();
+
+  ctx.restore();
   }else if(kind==="chain"){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(14,-12); ctx.stroke();
     for(let i=0;i<4;i++){
@@ -2112,19 +2142,12 @@ function drawMaskedNinja(n, v){
   rr(ctx,-11,18,9,10,5); ctx.fill();
   rr(ctx,  2,18,9,10,5); ctx.fill();
 
-  // weapon (simple blade)
-  ctx.strokeStyle = trim;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(10*dir, 6);
-  ctx.lineTo(28*dir, -10);
-  ctx.stroke();
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(14*dir, 3);
-  ctx.lineTo(18*dir, 0);
-  ctx.stroke();
+ // weapon (uses silhouette — dragon dagger looks special)
+ctx.save();
+ctx.translate(12*dir, 10); // lower hand position
+ctx.scale(dir, 1);         // mirror for right side
+drawWeaponSilhouette(ctx, equipBonus(n).weapon?.art || "");
+ctx.restore();
 
   // name tag (boss marker)
   ctx.globalAlpha *= 0.95;
