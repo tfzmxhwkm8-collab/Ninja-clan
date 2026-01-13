@@ -844,7 +844,7 @@ function drawWeaponSilhouette(ctx, kind){
 
   // red blade
   ctx.strokeStyle = "rgba(190,20,20,.95)";
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 2;
 
   // blade held DOWNWARD
   ctx.beginPath();
@@ -862,7 +862,7 @@ function drawWeaponSilhouette(ctx, kind){
   // guard
   ctx.shadowBlur = 0;
   ctx.strokeStyle = "rgba(255,255,255,.85)";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(-5, 2);
   ctx.lineTo(5, 2);
@@ -1515,6 +1515,13 @@ function battleLogPush(line){
   if(battleState.log.length>160) battleState.log.shift();
   renderBattleHUD();
 }
+function scrollBattleLogToBottom(){
+  const box = document.getElementById("battleLog");
+  if(!box) return;
+
+  const nearBottom = (box.scrollTop + box.clientHeight) >= (box.scrollHeight - 12);
+  if(nearBottom) box.scrollTop = box.scrollHeight;
+}
 
 // ---------- enemy creation ----------
 function makeEnemyNinja(template){
@@ -1891,6 +1898,7 @@ function renderBattleHUD(){
   const bt = document.getElementById("battleText");
   bt.style.whiteSpace = "pre-line";
   bt.textContent = (battleState.log.slice(-8).join("\n")) || "—";
+  scrollBattleLogToBottom();
 
   // Hide/disable Next (engine is auto-driven)
   const nextBtn = document.getElementById("battleNextBtn");
