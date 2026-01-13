@@ -1831,8 +1831,17 @@ function drawMaskedNinja(n, v){
   ctx.translate(v.x, v.y);
   ctx.scale(scale, scale);
 
-  // base colors
-  const suit = "rgba(20,20,22,.95)";
+  // ---- belt + colors (FIXED ordering) ----
+  const spent = tpSpent(n);
+  const beltName = beltFromSpent(spent);
+
+  // suit color: bosses purple, black-belts red, everyone else dark
+  const suit = n.isBoss
+    ? "rgba(90,20,120,.95)"       // purple boss
+    : (beltName === "Black"
+        ? "rgba(170,25,25,.95)"   // RED for Black Belt
+        : "rgba(20,20,22,.95)");  // normal
+
   const trim = "rgba(255,255,255,.82)";
   const ink  = "rgba(0,0,0,.9)";
 
@@ -1873,9 +1882,7 @@ function drawMaskedNinja(n, v){
   rr(ctx,-13,-8,26,28,10);
   ctx.fill();
 
-   // --- BELT (worn) ---
-  const spent = tpSpent(n);
-  const beltName = beltFromSpent(spent);
+  // --- BELT (worn) ---
   const beltHex  = BELT_COLOR[beltName] || "#f5f5f5";
 
   // Belt position on the torso (matches your body box)
@@ -1891,7 +1898,7 @@ function drawMaskedNinja(n, v){
   rr(ctx, bx, by+2, bw, 2, 2);
   ctx.fill();
 
-    // knot + tails (safe)
+  // knot + tails (safe)
   const dirB = (v.side==="L") ? 1 : -1;
 
   // knot
@@ -1902,7 +1909,7 @@ function drawMaskedNinja(n, v){
   // tail (always positive width)
   ctx.fillStyle = shadeRGBA(beltHex, 0.92);
   const tailW = 10;
-  const tailX = (dirB === 1) ? 2 : (2 - tailW); // if facing right, extend left
+  const tailX = (dirB === 1) ? 2 : (2 - tailW);
   rr(ctx, tailX, by+bh-1, tailW, 3, 2);
   ctx.fill();
 
@@ -1929,7 +1936,7 @@ function drawMaskedNinja(n, v){
   }
   ctx.restore();
   // --- end belt ---
-  
+
   // headband
   ctx.fillStyle = trim;
   rr(ctx,-12,-30,24,5,3);
