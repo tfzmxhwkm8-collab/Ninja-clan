@@ -511,9 +511,14 @@ function beltFromSpent(spent){
   for(const name of BELTS) if(spent>=BELT_TP[name]) b=name;
   return b;
 }
-
+const LEVEL_CAP = 120;               // <- max level you want
+const MAX_SPENT_FOR_LEVEL = LEVEL_CAP - 1;
 /* ---------- Training soft caps ---------- */
 function trainCost(statVal){
+  if(statVal>=60) return 50;
+  if(statVal>=51) return 15;
+  if(statVal>=41) return 10;
+  if(statVal>=31) return 6;
   if(statVal>=21) return 5;
   if(statVal>=16) return 4;
   if(statVal>=11) return 3;
@@ -661,8 +666,9 @@ function recalc(n){
   const AGI=n.base.agi+eq.agi;
   const END=n.base.end+eq.end;
 
-  const spent=tpSpent(n);
-  n.level = 1 + spent;
+ const spent = tpSpent(n);
+ const spentForLevel = Math.min(spent, MAX_SPENT_FOR_LEVEL);
+  n.level = 1 + spentForLevel;
 
   n.maxHP = 60 + END*12 + n.level*4;
   n.hp = clamp(n.hp ?? n.maxHP, 1, n.maxHP);
