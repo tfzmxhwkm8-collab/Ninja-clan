@@ -1211,26 +1211,40 @@ function recruitCost(){
   return 200 + (save.ninjas.length-1)*150;
 }
 function renderRoster(){
-  const cost=recruitCost();
-  $("recruitCost").textContent=cost;
-const atCap = save.ninjas.length >= NINJA_CAP;
-$("recruitBtn").disabled = atCap || save.currency.gold < cost;
+  const cost = recruitCost();
+
+  const recruitBtn = $("recruitBtn");
+
+  // Ensure the recruit button ALWAYS contains the recruitCost span
+  if(!document.getElementById("recruitCost")){
+    recruitBtn.innerHTML = `Recruit (🪙 <span id="recruitCost">0</span>)`;
+  }
+
+  // Now it's safe to update the span
+  $("recruitCost").textContent = cost;
+
+  const atCap = save.ninjas.length >= NINJA_CAP;
+  recruitBtn.disabled = atCap || save.currency.gold < cost;
+
+  // Change label WITHOUT destroying the inner span
   if(atCap){
-  $("recruitBtn").textContent = "Clan Full";
-} else {
-  $("recruitBtn").textContent = `Recruit (🪙 ${cost})`;
-}
-  const list=$("rosterList");
-  list.innerHTML="";
+    recruitBtn.innerHTML = `Clan Full`;
+  }else{
+    recruitBtn.innerHTML = `Recruit (🪙 <span id="recruitCost">${cost}</span>)`;
+  }
+
+  const list = $("rosterList");
+  list.innerHTML = "";
+
   for(const n of save.ninjas){
     recalc(n);
-    const isActive = n.id===save.activeId;
-    const selected = n.id===rosterSelectedId;
+    const isActive = n.id === save.activeId;
+    const selected = n.id === rosterSelectedId;
 
-    const row=document.createElement("div");
-    row.className="item";
+    const row = document.createElement("div");
+    row.className = "item";
     row.style.background = selected ? "rgba(255,255,255,.35)" : "";
-    row.innerHTML=`
+    row.innerHTML = `
       <div style="min-width:0">
         <div style="font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           ${n.name} <span class="pill">Lv${n.level}</span> ${isActive?`<span class="pill">ACTIVE</span>`:""}
@@ -1241,8 +1255,12 @@ $("recruitBtn").disabled = atCap || save.currency.gold < cost;
     `;
     list.appendChild(row);
   }
+
   list.querySelectorAll("button[data-sel]").forEach(btn=>{
-    btn.onclick=()=>{ rosterSelectedId=btn.getAttribute("data-sel"); renderRoster(); };
+    btn.onclick = ()=>{
+      rosterSelectedId = btn.getAttribute("data-sel");
+      renderRoster();
+    };
   });
 
   $("setActiveBtn").disabled = !rosterSelectedId;
