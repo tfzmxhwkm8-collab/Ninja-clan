@@ -1591,11 +1591,11 @@ function genEnemyClan(difficulty){
   );
 
 const statBase =
-  difficulty==="medium" ? avgLv*0.4 :
-  difficulty==="hard"   ? avgLv*1.35 :
+  difficulty==="medium" ? avgLv*0.15 :
+  difficulty==="hard"   ? avgLv*1.1 :
   avgLv*0.75;
 
-const pool = statBase * 2.25;
+const pool = statBase * 3;
 
 const clan=[];
 for(let i=0;i<size;i++){
@@ -1618,7 +1618,7 @@ function makeBossEnemy(){
   const baseEnd=1+each;
 
   const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
-  boss.base.str += 100; boss.base.agi += 100; boss.base.end += 300;
+  boss.base.str += 100; boss.base.agi += 100; boss.base.end += 1000;
   recalc(boss); boss.hp=boss.maxHP;
   boss.isBoss=true;
   return [boss];
@@ -1734,7 +1734,7 @@ function stepAction(dt){
   act.t += dt;
   const p = clamp(act.t / act.duration, 0, 1);
 
-/* ===== PASTE PART 2 START ===== */
+
 // SWING WINDOW: swing up then through around the strike moment
 if (va) {
   // swing happens around mid (strike) time
@@ -1746,7 +1746,7 @@ if (va) {
   // alternate direction each action
   if (p < 0.10) va.swingDir = (va.swingDir || 1);
 }
-/* ===== PASTE PART 2 END ===== */
+
   // RUN CLOSE: move actor near the target (not just small lunge)
   // Approach to a “strike distance” near target x.
   if(va && vt){
