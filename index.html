@@ -1644,7 +1644,7 @@ const statBase =
   difficulty==="hard"   ? avgLv*1.1 :
   avgLv*0.75;
 
-const pool = statBase * 3;
+const pool = statBase * 2.25;
 
 const clan=[];
 for(let i=0;i<size;i++){
@@ -1667,7 +1667,7 @@ function makeBossEnemy(){
   const baseEnd=1+each;
 
   const boss = makeEnemyNinja({name:"Boss Ronin", str:baseStr, agi:baseAgi, end:baseEnd, isBoss:true});
-  boss.base.str += 100; boss.base.agi += 100; boss.base.end += 1000;
+  boss.base.str += 50; boss.base.agi += 100; boss.base.end += 100; 
   recalc(boss); boss.hp=boss.maxHP;
   boss.isBoss=true;
   return [boss];
@@ -1768,7 +1768,7 @@ function ensureDuels(){
       aId, bId,
       t: 0,
       didClash: false,
-      duration: 0.30,
+      duration: 0.60,
       strikeAt: 0.35
     });
   }
