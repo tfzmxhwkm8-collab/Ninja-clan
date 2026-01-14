@@ -1564,7 +1564,21 @@ function dealDamage(att, def, mult=1){
   def.hp = clamp(def.hp - dmg, 0, def.maxHP);
   return {dmg, dodged:false, crit:r.crit};
 }
+function comboChance(att){
+  // Example scaling: ~6% at AGI 1, ~22% at AGI 40, caps at 40%
+  const agi = att?.derived?.AGI || 0;
+  return clamp(0.06 + agi * 0.004, 0.06, 0.40);
+}
 
+function tryComboHit(att, def){
+  if(!att || !def) return null;
+  if(def.hp <= 0) return null;
+
+  if(Math.random() >= comboChance(att)) return null;
+
+  // Optional: slightly weaker combo hit so it’s not broken
+  return dealDamage(att, def, 0.75);
+}
 function speedScore(n){ return n.derived.AGI + n.level*0.25 + rand(-0.5,0.5); }
 function buildTurnOrder(){
   const all=[...battleState.your, ...battleState.enemy].filter(n=>n.hp>0);
@@ -1829,10 +1843,43 @@ function stepDuels(dt){
     // clash moment
     if(!duel.didClash && p >= duel.strikeAt){
       duel.didClash = true;
+      if (va) va.swingDir = (va.swingDir || 1) * -1;
+      if (vb) vb.swingDir = (vb.swingDir || 1) * -1;
 
       const resAB = dealDamage(a, b, 1);
-      const resBA = (b.hp>0) ? dealDamage(b, a, 1) : {dmg:0, dodged:false, crit:false};
+      // ---- COMBO (A hits B again) ----
+const comboAB = tryComboHit(a, b);
+if(comboAB){
+  // Flip swing direction so the second hit looks like a follow-up slash
+  if(va) va.swingDir = (va.swingDir || 1) * -1;
 
+  if(comboAB.dodged){
+    if(vb) vb.floating.push({ text:"COMBO DODGE", x:vb.x, y:vb.y-50, vy:-28, life:0.9, crit:false });
+  }else{
+    if(vb){
+      vb.hitFlash = 1; vb.hpPulse = 1;
+      vb.floating.push({ text:`COMBO -${comboAB.dmg}`, x:vb.x, y:vb.y-52, vy:-34, life:0.95, crit:comboAB.crit });
+    }
+  }
+}
+      const resBA = (b.hp>0) ? dealDamage(b, a, 1) : {dmg:0, dodged:false, crit:false};
+// ---- COMBO (B hits A again) ----
+if(b.hp > 0 && a.hp > 0){
+  const comboBA = tryComboHit(b, a);
+  if(comboBA){
+    if(vb) vb.swingDir = (vb.swingDir || 1) * -1;
+
+    if(comboBA.dodged){
+      if(va) va.floating.push({ text:"COMBO DODGE", x:va.x, y:va.y-50, vy:-28, life:0.9, crit:false });
+    }else{
+      if(va){
+        va.hitFlash = 1; va.hpPulse = 1;
+        va.floating.push({ text:`COMBO -${comboBA.dmg}`, x:va.x, y:va.y-52, vy:-34, life:0.95, crit:comboBA.crit });
+      }
+    }
+  }
+}
+      
       if(resAB.dodged){
         if(vb) vb.floating.push({ text:"DODGE", x:vb.x, y:vb.y-32, vy:-26, life:0.9, crit:false });
       }else if(vb){
