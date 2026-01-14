@@ -1699,15 +1699,16 @@ function visFor(n){
 /* ============================
    ACTION QUEUE (resets every battle)
 ============================ */
-function enqueueAction(actor, target){
-  const act = {
-    actorId: actor.id,
-    targetId: target?.id || null,
+function enqueueAction(a, b){
+  // A and B will run to center and hit at the same time
+  battleState.queue.push({
+    aId: a.id,
+    bId: b.id,
     t: 0,
-    didHit: false,
-    duration: 0.62, // slightly longer to showcase “run close”
-  };
-  battleState.queue.push(act);
+    didClash: false,
+    duration: 0.30,     // faster
+    strikeAt: 0.35      // hit earlier
+  });
 }
 
 function planNextRoundIfNeeded(){
@@ -1716,21 +1717,26 @@ function planNextRoundIfNeeded(){
 
   syncVisuals();
 
+  // Build order like before, but we turn each actor's turn into a "clash"
   const order = buildTurnOrder();
-  for(const actor of order){
-    if(actor.hp<=0) continue;
-    const foes = actor.isEnemy ? battleState.your : battleState.enemy;
-    const target = pickTarget(foes);
-    if(!target){
-      endBattle(!actor.isEnemy);
+
+  for(const a of order){
+    if(a.hp<=0) continue;
+
+    const foes = a.isEnemy ? battleState.your : battleState.enemy;
+    const b = pickTarget(foes);
+    if(!b){
+      endBattle(!a.isEnemy);
       return;
     }
-    enqueueAction(actor, target);
+
+    // enqueue a clash between a and b
+    enqueueAction(a, b);
   }
 }
-
 function stepAction(dt){
   if(!battleState || battleState.over) return;
+
   if(battleState.queue.length===0){
     battleState.round++;
     planNextRoundIfNeeded();
@@ -1738,84 +1744,97 @@ function stepAction(dt){
   }
 
   const act = battleState.queue[0];
-  const actor = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.actorId) || null;
-  const target = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.targetId) || null;
 
-  if(!actor || actor.hp<=0 || !target || target.hp<=0){
+  const a = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.aId) || null;
+  const b = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.bId) || null;
+
+  if(!a || !b || a.hp<=0 || b.hp<=0){
     battleState.queue.shift();
     return;
   }
 
-  const va = visFor(actor);
-  const vt = visFor(target);
+  const va = visFor(a);
+  const vb = visFor(b);
 
   act.t += dt;
   const p = clamp(act.t / act.duration, 0, 1);
 
-
-// SWING WINDOW: swing up then through around the strike moment
-if (va) {
-  // swing happens around mid (strike) time
-  const center = 0.52;     // strike moment
-  const width  = 0.22;     // how long the swing lasts
-  const s = 1 - Math.min(1, Math.abs(p - center) / width); // 0..1 peak
-  va.swing = Math.max(va.swing, s);
-
-  // alternate direction each action
-  if (p < 0.10) va.swingDir = (va.swingDir || 1);
-}
-
-  // RUN CLOSE: move actor near the target (not just small lunge)
-  // Approach to a “strike distance” near target x.
-  if(va && vt){
-    const dir = (va.side==="L") ? 1 : -1;
-    const strikeDist = 90; // smaller = closer; 92 looks like “right up on them”
-    const endX = vt.baseX - dir*strikeDist;
-
-    // Run forward for first ~55% of action, then retreat
-    const runT = (p < 0.55) ? easeOut(p/0.55) : (1 - easeOut((p-0.55)/0.45));
+  // BOTH RUN TO MIDDLE
+  if(va){
+    const midX = battleCanvas.width/2;
+    const endX = (va.side==="L") ? (midX - 55) : (midX + 55);
+    const runIn = 0.45;
+    const runT = (p < runIn) ? easeOut(p/runIn)
+              : (1 - easeOut((p-runIn)/(1-runIn)));
     va.run = clamp(runT, 0, 1);
-
     va.x = lerp(va.baseX, endX, va.run);
+    // swing around clash moment
+    const s = 1 - Math.min(1, Math.abs(p - act.strikeAt) / 0.20);
+    va.swing = Math.max(va.swing||0, s);
+  }
+  if(vb){
+    const midX = battleCanvas.width/2;
+    const endX = (vb.side==="L") ? (midX - 55) : (midX + 55);
+    const runIn = 0.45;
+    const runT = (p < runIn) ? easeOut(p/runIn)
+              : (1 - easeOut((p-runIn)/(1-runIn)));
+    vb.run = clamp(runT, 0, 1);
+    vb.x = lerp(vb.baseX, endX, vb.run);
+    const s = 1 - Math.min(1, Math.abs(p - act.strikeAt) / 0.20);
+    vb.swing = Math.max(vb.swing||0, s);
   }
 
-  // apply damage at strike moment
-  if(!act.didHit && p >= 0.52){
-    act.didHit = true;
+  // CLASH: BOTH DEAL DAMAGE AT SAME TIME
+  if(!act.didClash && p >= act.strikeAt){
+    act.didClash = true;
 
-    const res = dealDamage(actor, target, 1);
+    const resAB = dealDamage(a, b, 1);
+    const resBA = (b.hp>0) ? dealDamage(b, a, 1) : {dmg:0, dodged:false, crit:false};
 
-    const an = actor.isBoss ? "👹 Boss" : (actor.isEnemy ? "Enemy" : actor.name);
-    const tn = target.isEnemy ? (target.isBoss ? "👹 Boss" : "Enemy") : target.name;
+    const aName = a.isBoss ? "👹 Boss" : (a.isEnemy ? "Enemy" : a.name);
+    const bName = b.isBoss ? "👹 Boss" : (b.isEnemy ? "Enemy" : b.name);
 
-    if(res.dodged){
-      battleLogPush(`${an} attacks → ${tn} dodges!`);
-      if(vt){
-        vt.floating.push({ text:"DODGE", x:vt.x, y:vt.y-32, vy:-26, life:0.9, crit:false });
-      }
+    // log A -> B
+    if(resAB.dodged){
+      battleLogPush(`${aName} clashes → ${bName} dodges!`);
+      if(vb) vb.floating.push({ text:"DODGE", x:vb.x, y:vb.y-32, vy:-26, life:0.9, crit:false });
     }else{
-      battleLogPush(`${an} hits ${tn} for ${res.dmg}${res.crit?" (CRIT)":"."}`);
-      if(vt){
-        vt.hitFlash = 1;
-        vt.hpPulse = 1;
-        vt.floating.push({ text:`-${res.dmg}`, x:vt.x, y:vt.y-36, vy:-30, life:0.95, crit:res.crit });
-      }
-      if(target.hp<=0){
-        battleLogPush(`💀 ${tn} is down!`);
-        if(vt) vt.koFade = 0.001;
+      battleLogPush(`${aName} hits ${bName} for ${resAB.dmg}${resAB.crit?" (CRIT)":"."}`);
+      if(vb){
+        vb.hitFlash=1; vb.hpPulse=1;
+        vb.floating.push({ text:`-${resAB.dmg}`, x:vb.x, y:vb.y-36, vy:-30, life:0.95, crit:resAB.crit });
       }
     }
+
+    // log B -> A
+    if(resBA.dmg>0 || resBA.dodged){
+      if(resBA.dodged){
+        battleLogPush(`${bName} clashes → ${aName} dodges!`);
+        if(va) va.floating.push({ text:"DODGE", x:va.x, y:va.y-32, vy:-26, life:0.9, crit:false });
+      }else{
+        battleLogPush(`${bName} hits ${aName} for ${resBA.dmg}${resBA.crit?" (CRIT)":"."}`);
+        if(va){
+          va.hitFlash=1; va.hpPulse=1;
+          va.floating.push({ text:`-${resBA.dmg}`, x:va.x, y:va.y-36, vy:-30, life:0.95, crit:resBA.crit });
+        }
+      }
+    }
+
+    if(b.hp<=0) battleLogPush(`💀 ${bName} is down!`);
+    if(a.hp<=0) battleLogPush(`💀 ${aName} is down!`);
 
     if(living(battleState.enemy).length===0){ endBattle(true); return; }
     if(living(battleState.your).length===0){ endBattle(false); return; }
   }
 
+  // finish action
   if(p >= 1){
-    // reset actor run so next action starts clean
     if(va) va.run = 0;
+    if(vb) vb.run = 0;
     battleState.queue.shift();
   }
 }
+
 
 /* ============================
    END / REWARDS + HARD RESET
