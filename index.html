@@ -1527,7 +1527,24 @@ function pickTarget(team){
   const alive=living(team);
   return alive.length ? pick(alive) : null;
 }
+function getById(id){
+  return [...battleState.your, ...battleState.enemy].find(n=>n.id===id) || null;
+}
 
+function rebuildWaitingLists(){
+  const inDuel = new Set();
+  for(const d of battleState.duels){
+    if(d.aId) inDuel.add(d.aId);
+    if(d.bId) inDuel.add(d.bId);
+  }
+
+  battleState.waitingYour  = living(battleState.your).map(n=>n.id).filter(id=>!inDuel.has(id));
+  battleState.waitingEnemy = living(battleState.enemy).map(n=>n.id).filter(id=>!inDuel.has(id));
+
+  // fastest first (optional but nice)
+  battleState.waitingYour.sort((A,B)=>speedScore(getById(B))-speedScore(getById(A)));
+  battleState.waitingEnemy.sort((A,B)=>speedScore(getById(B))-speedScore(getById(A)));
+}
 function rollHit(att, def){
   const dodge = def.derived.dodge;
   if(Math.random() < dodge) return {hit:false, crit:false};
@@ -1609,7 +1626,7 @@ function genEnemyClan(difficulty){
   );
 
 const statBase =
-  difficulty==="medium" ? avgLv*0.15 :
+  difficulty==="medium" ? avgLv*0.75 :
   difficulty==="hard"   ? avgLv*1.1 :
   avgLv*0.75;
 
@@ -1699,142 +1716,147 @@ function visFor(n){
 /* ============================
    ACTION QUEUE (resets every battle)
 ============================ */
-function enqueueAction(a, b){
-  // A and B will run to center and hit at the same time
-  battleState.queue.push({
-    aId: a.id,
-    bId: b.id,
-    t: 0,
-    didClash: false,
-    duration: 0.30,     // faster
-    strikeAt: 0.35      // hit earlier
-  });
-}
+/* ============================
+   DUEL LANES (parallel 1v1s)
+   - Up to min(aliveYour, aliveEnemy) fights at once
+   - If 1v3, only 1 lane runs
+============================ */
 
-function planNextRoundIfNeeded(){
+const MAX_LANES = 5; // cap if you want (10 is fine)
+
+function ensureDuels(){
   if(!battleState || battleState.over) return;
-  if(battleState.queue.length>0) return;
 
   syncVisuals();
 
-  // Build order like before, but we turn each actor's turn into a "clash"
-  const order = buildTurnOrder();
+  // remove broken duels (dead or missing)
+  battleState.duels = battleState.duels.filter(d=>{
+    const a = getById(d.aId);
+    const b = getById(d.bId);
+    return a && b && a.hp>0 && b.hp>0;
+  });
 
-  for(const a of order){
-    if(a.hp<=0) continue;
+  rebuildWaitingLists();
 
-    const foes = a.isEnemy ? battleState.your : battleState.enemy;
-    const b = pickTarget(foes);
-    if(!b){
-      endBattle(!a.isEnemy);
-      return;
-    }
+  const lanesAllowed = Math.min(
+    living(battleState.your).length,
+    living(battleState.enemy).length,
+    MAX_LANES
+  );
 
-    // enqueue a clash between a and b
-    enqueueAction(a, b);
+  // create duels until we hit allowed lanes
+  while(battleState.duels.length < lanesAllowed){
+    const aId = battleState.waitingYour.shift();
+    const bId = battleState.waitingEnemy.shift();
+    if(!aId || !bId) break;
+
+    battleState.duels.push({
+      aId, bId,
+      t: 0,
+      didClash: false,
+      duration: 0.30,
+      strikeAt: 0.35
+    });
   }
+
+  // OPTIONAL: align active fighters into duel rows visually
+  const laneMapYour = new Map();
+  const laneMapEnemy = new Map();
+  battleState.duels.forEach((d, i)=>{
+    laneMapYour.set(d.aId, i);
+    laneMapEnemy.set(d.bId, i);
+  });
+
+  battleState.visuals.L.forEach(v=>{
+    if(laneMapYour.has(v.id)){
+      const lane = laneMapYour.get(v.id);
+      v.lane = lane;
+      v.baseY = 210 + lane*75;
+    }
+  });
+  battleState.visuals.R.forEach(v=>{
+    if(laneMapEnemy.has(v.id)){
+      const lane = laneMapEnemy.get(v.id);
+      v.lane = lane;
+      v.baseY = 210 + lane*75;
+    }
+  });
 }
-function stepAction(dt){
+
+function stepDuels(dt){
   if(!battleState || battleState.over) return;
 
-  if(battleState.queue.length===0){
-    battleState.round++;
-    planNextRoundIfNeeded();
-    return;
-  }
+  if(living(battleState.enemy).length===0){ endBattle(true); return; }
+  if(living(battleState.your).length===0){ endBattle(false); return; }
 
-  const act = battleState.queue[0];
+  ensureDuels();
 
-  const a = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.aId) || null;
-  const b = [...battleState.your, ...battleState.enemy].find(n=>n.id===act.bId) || null;
+  for(const duel of battleState.duels){
+    const a = getById(duel.aId);
+    const b = getById(duel.bId);
+    if(!a || !b || a.hp<=0 || b.hp<=0) continue;
 
-  if(!a || !b || a.hp<=0 || b.hp<=0){
-    battleState.queue.shift();
-    return;
-  }
+    const va = visFor(a);
+    const vb = visFor(b);
 
-  const va = visFor(a);
-  const vb = visFor(b);
+    duel.t += dt;
+    const p = clamp(duel.t / duel.duration, 0, 1);
 
-  act.t += dt;
-  const p = clamp(act.t / act.duration, 0, 1);
+    // run both to middle
+    if(va){
+      const midX = battleCanvas.width/2;
+      const endX = (va.side==="L") ? (midX - 55) : (midX + 55);
+      const runIn = 0.45;
+      const runT = (p < runIn) ? easeOut(p/runIn)
+                : (1 - easeOut((p-runIn)/(1-runIn)));
+      va.run = clamp(runT, 0, 1);
+      va.x = lerp(va.baseX, endX, va.run);
+      const s = 1 - Math.min(1, Math.abs(p - duel.strikeAt) / 0.20);
+      va.swing = Math.max(va.swing||0, s);
+    }
+    if(vb){
+      const midX = battleCanvas.width/2;
+      const endX = (vb.side==="L") ? (midX - 55) : (midX + 55);
+      const runIn = 0.45;
+      const runT = (p < runIn) ? easeOut(p/runIn)
+                : (1 - easeOut((p-runIn)/(1-runIn)));
+      vb.run = clamp(runT, 0, 1);
+      vb.x = lerp(vb.baseX, endX, vb.run);
+      const s = 1 - Math.min(1, Math.abs(p - duel.strikeAt) / 0.20);
+      vb.swing = Math.max(vb.swing||0, s);
+    }
 
-  // BOTH RUN TO MIDDLE
-  if(va){
-    const midX = battleCanvas.width/2;
-    const endX = (va.side==="L") ? (midX - 55) : (midX + 55);
-    const runIn = 0.45;
-    const runT = (p < runIn) ? easeOut(p/runIn)
-              : (1 - easeOut((p-runIn)/(1-runIn)));
-    va.run = clamp(runT, 0, 1);
-    va.x = lerp(va.baseX, endX, va.run);
-    // swing around clash moment
-    const s = 1 - Math.min(1, Math.abs(p - act.strikeAt) / 0.20);
-    va.swing = Math.max(va.swing||0, s);
-  }
-  if(vb){
-    const midX = battleCanvas.width/2;
-    const endX = (vb.side==="L") ? (midX - 55) : (midX + 55);
-    const runIn = 0.45;
-    const runT = (p < runIn) ? easeOut(p/runIn)
-              : (1 - easeOut((p-runIn)/(1-runIn)));
-    vb.run = clamp(runT, 0, 1);
-    vb.x = lerp(vb.baseX, endX, vb.run);
-    const s = 1 - Math.min(1, Math.abs(p - act.strikeAt) / 0.20);
-    vb.swing = Math.max(vb.swing||0, s);
-  }
+    // clash moment
+    if(!duel.didClash && p >= duel.strikeAt){
+      duel.didClash = true;
 
-  // CLASH: BOTH DEAL DAMAGE AT SAME TIME
-  if(!act.didClash && p >= act.strikeAt){
-    act.didClash = true;
+      const resAB = dealDamage(a, b, 1);
+      const resBA = (b.hp>0) ? dealDamage(b, a, 1) : {dmg:0, dodged:false, crit:false};
 
-    const resAB = dealDamage(a, b, 1);
-    const resBA = (b.hp>0) ? dealDamage(b, a, 1) : {dmg:0, dodged:false, crit:false};
-
-    const aName = a.isBoss ? "👹 Boss" : (a.isEnemy ? "Enemy" : a.name);
-    const bName = b.isBoss ? "👹 Boss" : (b.isEnemy ? "Enemy" : b.name);
-
-    // log A -> B
-    if(resAB.dodged){
-      battleLogPush(`${aName} clashes → ${bName} dodges!`);
-      if(vb) vb.floating.push({ text:"DODGE", x:vb.x, y:vb.y-32, vy:-26, life:0.9, crit:false });
-    }else{
-      battleLogPush(`${aName} hits ${bName} for ${resAB.dmg}${resAB.crit?" (CRIT)":"."}`);
-      if(vb){
+      if(resAB.dodged){
+        if(vb) vb.floating.push({ text:"DODGE", x:vb.x, y:vb.y-32, vy:-26, life:0.9, crit:false });
+      }else if(vb){
         vb.hitFlash=1; vb.hpPulse=1;
         vb.floating.push({ text:`-${resAB.dmg}`, x:vb.x, y:vb.y-36, vy:-30, life:0.95, crit:resAB.crit });
       }
-    }
 
-    // log B -> A
-    if(resBA.dmg>0 || resBA.dodged){
       if(resBA.dodged){
-        battleLogPush(`${bName} clashes → ${aName} dodges!`);
         if(va) va.floating.push({ text:"DODGE", x:va.x, y:va.y-32, vy:-26, life:0.9, crit:false });
-      }else{
-        battleLogPush(`${bName} hits ${aName} for ${resBA.dmg}${resBA.crit?" (CRIT)":"."}`);
-        if(va){
-          va.hitFlash=1; va.hpPulse=1;
-          va.floating.push({ text:`-${resBA.dmg}`, x:va.x, y:va.y-36, vy:-30, life:0.95, crit:resBA.crit });
-        }
+      }else if(va){
+        va.hitFlash=1; va.hpPulse=1;
+        va.floating.push({ text:`-${resBA.dmg}`, x:va.x, y:va.y-36, vy:-30, life:0.95, crit:resBA.crit });
       }
     }
 
-    if(b.hp<=0) battleLogPush(`💀 ${bName} is down!`);
-    if(a.hp<=0) battleLogPush(`💀 ${aName} is down!`);
-
-    if(living(battleState.enemy).length===0){ endBattle(true); return; }
-    if(living(battleState.your).length===0){ endBattle(false); return; }
-  }
-
-  // finish action
-  if(p >= 1){
-    if(va) va.run = 0;
-    if(vb) vb.run = 0;
-    battleState.queue.shift();
+    // cycle repeats
+    if(p >= 1){
+      if(va) va.run = 0;
+      if(vb) vb.run = 0;
+      duel.t = 0;
+      duel.didClash = false;
+    }
   }
 }
-
 
 /* ============================
    END / REWARDS + HARD RESET
@@ -1911,12 +1933,14 @@ function startBattle(kind){
     enemy,
     enemyStart: enemy.length,
     log: [`⚔️ Battle start: ${kind.toUpperCase()} — Your clan ${your.length} vs Enemy ${enemy.length}`],
-    queue: [],
+    duels: [],
+    waitingYour: [],
+    waitingEnemy: [],
     visuals: {L:[], R:[]}
   };
 
   syncVisuals();
-  planNextRoundIfNeeded();
+  ensureDuels();
 
   document.getElementById("town")?.classList.add("hidden");
   document.getElementById("battle")?.classList.remove("hidden");
@@ -2330,9 +2354,8 @@ function battleLoop(ts){
 
   // REAL auto pause/resume
   if(!battleState.over && battleAutoOn){
-    planNextRoundIfNeeded();
-    stepAction(dt);
-  }
+  stepDuels(dt);
+}
 
   updateVisuals(dt);
   drawBattle();
