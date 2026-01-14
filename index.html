@@ -513,6 +513,9 @@ function beltFromSpent(spent){
 }
 const LEVEL_CAP = 120;               // <- max level you want
 const MAX_SPENT_FOR_LEVEL = LEVEL_CAP - 1;
+    function isLevelCapped(n){
+  return tpSpent(n) >= MAX_SPENT_FOR_LEVEL; // at 119 spent => level 120
+}
 /* ---------- Training soft caps ---------- */
 function trainCost(statVal){
   if(statVal>=60) return 50;
@@ -789,25 +792,44 @@ function renderDojoTraining(){
   $("cAGI").textContent=cA;
   $("cEND").textContent=cE;
 
-  $("trainSTR").disabled=a.tp<cS;
-  $("trainAGI").disabled=a.tp<cA;
-  $("trainEND").disabled=a.tp<cE;
+  const capped = isLevelCapped(a);
+
+  $("trainSTR").disabled = capped || a.tp < cS;
+  $("trainAGI").disabled = capped || a.tp < cA;
+  $("trainEND").disabled = capped || a.tp < cE;
 }
+
 function spendTP(stat){
   const a=activeNinja();
+
+  if(isLevelCapped(a)){
+    alert(`Level cap reached (Lv ${LEVEL_CAP}). Training is locked.`);
+    renderDojoTraining();
+    return;
+  }
+
   const cost=trainCost(a.base[stat]);
   if(a.tp<cost) return;
+
   a.tp-=cost;
   a.base[stat]+=1;
+
+  if(tpSpent(a) > MAX_SPENT_FOR_LEVEL){
+    a.base[stat]-=1;
+    a.tp+=cost;
+    alert(`That upgrade would exceed the Lv ${LEVEL_CAP} cap.`);
+  }
+
   recalc(a);
   persist(); refreshTop();
   renderDojoTraining();
   renderDojoNinja();
 }
+
 $("trainSTR").onclick=()=>spendTP("str");
 $("trainAGI").onclick=()=>spendTP("agi");
 $("trainEND").onclick=()=>spendTP("end");
-
+  
 /* ---------- Dojo preview drawing (arms + weapon silhouette) ---------- */
 function roundRect(ctx,x,y,w,h,r,fill=true){
   const rr=Math.min(r,w/2,h/2);
@@ -1799,16 +1821,11 @@ function endBattle(victory){
     const tpPerEnemy = 1;
     tpAward = battleState.enemyStart * tpPerEnemy + 1; // leader bonus
 
-    const active = activeNinja();
-    active.tp += tpAward;
 
-    // Small TP to surviving clan members
-    for (const n of battleState.your) {
-      if (n.id !== active.id && n.hp > 0) {
-        n.tp += 1;
+    const active = activeNinja();
+    if(!isLevelCapped(active)) active.tp += tpAward;
+    
       }
-    }
-  }
 
   save.meta.wins   = save.meta.wins   || 0;
   save.meta.losses = save.meta.losses || 0;
