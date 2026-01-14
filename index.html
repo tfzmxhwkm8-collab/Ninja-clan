@@ -662,7 +662,17 @@ function equipBonus(n){
     relic:r
   };
 }
-
+// Ensures a weapon can only be equipped by ONE ninja at a time
+function unequipWeaponFromOthers(weaponId, keepNinjaId){
+  if(!weaponId) return;
+  for(const n of save.ninjas){
+    if(n.id !== keepNinjaId && n.equip?.weaponId === weaponId){
+      n.equip.weaponId = null;
+      recalc(n);
+      n.hp = clamp(n.hp, 0, n.maxHP);
+    }
+  }
+}
 function recalc(n){
   const eq=equipBonus(n);
   const STR=n.base.str+eq.str;
@@ -1158,8 +1168,12 @@ function renderDojoNinja(){
 }
 
 $("djEquipWeapon").onclick=()=>{
-  const a=activeNinja();
-  a.equip.weaponId = $("djWeaponSelect").value || null;
+  const a = activeNinja();
+  const wid = $("djWeaponSelect").value || null;
+
+  unequipWeaponFromOthers(wid, a.id);
+  a.equip.weaponId = wid;
+
   recalc(a); persist(); refreshTop(); renderDojoNinja();
 };
 $("djUnequipWeapon").onclick=()=>{
@@ -1302,10 +1316,14 @@ $("equipWeaponBtn").onclick=()=>{
     save.currency.gold -= Math.round(sel.cost);
     save.inventory.weapons.push(sel);
   }
-  const a=activeNinja();
-  a.equip.weaponId=sel.id;
+
+  const a = activeNinja();
+  unequipWeaponFromOthers(sel.id, a.id);
+  a.equip.weaponId = sel.id;
+
   recalc(a);
-  persist(); refreshTop();
+  persist();
+  refreshTop();
   renderWeaponShop();
   renderDojoNinja();
 };
@@ -2524,7 +2542,22 @@ function ensureSaveIntegrity(){
     recalc(n);
     n.hp = clamp(n.hp, 0, n.maxHP);
   }
+// enforce “weapon can only be equipped by one ninja” on load
+{
+  const seen = new Set();
+  for (const n of save.ninjas) {
+    const wid = n.equip?.weaponId;
+    if (!wid) continue;
 
+    if (seen.has(wid)) {
+      n.equip.weaponId = null; // already taken
+      recalc(n);
+      n.hp = clamp(n.hp, 0, n.maxHP);
+    } else {
+      seen.add(wid);
+    }
+  }
+}
   // persist back into profiles
   profiles.slots[profiles.active] = save;
 }
