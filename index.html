@@ -487,7 +487,8 @@
 ====================================================== */
 
 const PROFILE_KEY="ninja_clan_full_v1";
-
+const NINJA_CAP = 12; // change to whatever you want
+    
 /* ---------- Utils ---------- */
 const $ = (id)=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -1212,8 +1213,13 @@ function recruitCost(){
 function renderRoster(){
   const cost=recruitCost();
   $("recruitCost").textContent=cost;
-  $("recruitBtn").disabled = save.currency.gold < cost;
-
+const atCap = save.ninjas.length >= NINJA_CAP;
+$("recruitBtn").disabled = atCap || save.currency.gold < cost;
+  if(atCap){
+  $("recruitBtn").textContent = "Clan Full";
+} else {
+  $("recruitBtn").textContent = `Recruit (🪙 ${cost})`;
+}
   const list=$("rosterList");
   list.innerHTML="";
   for(const n of save.ninjas){
@@ -1243,6 +1249,10 @@ function renderRoster(){
 }
 
 $("recruitBtn").onclick=()=>{
+  if(save.ninjas.length >= NINJA_CAP){
+  alert(`Ninja cap reached (${NINJA_CAP}). Fire a ninja to recruit more.`);
+  return;
+}
   const cost=recruitCost();
   if(save.currency.gold < cost) return;
 
@@ -2645,6 +2655,29 @@ function ensureSaveIntegrity(){
     } else {
       seen.add(wid);
     }
+  }
+}
+  // ---- Ninja cap enforcement (trim NEWEST, keep OLDEST + always keep ACTIVE) ----
+if (save.ninjas.length > NINJA_CAP) {
+  const activeId = save.activeId || save.ninjas[0]?.id;
+
+  // Keep oldest NINJA_CAP from the front
+  let keep = save.ninjas.slice(0, NINJA_CAP);
+
+  // If active isn't in kept list, force it in (and remove the newest kept to make room)
+  if (activeId && !keep.some(n => n.id === activeId)) {
+    const active = save.ninjas.find(n => n.id === activeId);
+    if (active) {
+      keep.pop();          // drop newest among the kept
+      keep.push(active);   // add active
+    }
+  }
+
+  save.ninjas = keep;
+
+  // Ensure activeId still valid
+  if (!save.ninjas.some(n => n.id === save.activeId)) {
+    save.activeId = save.ninjas[0]?.id || null;
   }
 }
   // persist back into profiles
